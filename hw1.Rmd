@@ -1,0 +1,99 @@
+---
+title: "HW1"
+output: pdf_document
+date: "2023-09-06"
+---
+
+1. Use the trees data in the R package datasets. Explain what you see when you use the boxplot() function in the following ways:
+boxplot(Volume, varwidth = TRUE)
+
+boxplot(Girth, notch = TRUE)
+
+```{r}
+dd <- data.frame(trees)
+boxplot(dd$Volume, varwidth = TRUE)
+```
+This plot shows the volume of the tree drawn with widths proportional to the square-roots of the number of observations in the groups. The box represents the 50% of the central data, with the bliack line inside that represents the median. On each side of the box there is drawn a segment to the furthest data without counting boxplot outliers, that in case there there is one outlier on the top.
+
+
+```{r}
+boxplot(dd$Girth, notch = TRUE)
+```
+This plot shows the girth of the tree drawn with notches in each side of the boxes. The notch represents the uncertainty or confidence interval around the median of the tree girth. The notches limits represent confidence intervals around medians.
+
+
+2. Use the trees data in the R package datasets.
+Use the gglot2 package to construct a boxplot of Volume, in black with a horizontal orientation rather than the default vertical gray boxplot.
+
+```{r}
+library(ggplot2)
+ggplot(data = dd, mapping = aes(y=Volume,x=0), horizontal=T) +
+  geom_boxplot(fill="black") +
+  coord_flip()
+
+```
+
+```{r}
+ggplot(dd, aes(sample=Volume))+stat_qq(col="orange")+
+  stat_qq_line()+theme_light() + labs(y="Volume",x = "Normal quantiles")
+
+```
+```{r}
+shapiro.test(dd$Volume)
+
+chisq.test(dd$Volume)
+```
+Discuss whether you can assume that Volume follows a normal distribution, and if not, in what way(s) the data departs from normality. Use the normal Q-Q plot, as well as the Shapiro-Wilk and chi-square goodness of fit tests for normality.
+From the normal qq plot of the tree volume, the dot are not lie aon a line and from the Shapiro-Wilk normality test of the tree volume, the p-value = 0.003579 which is less than 0.05 which rejects the H0: the dataset is normally distributed. The tree volume is not normally distributed.
+
+3. Use the mtcars data from the R package datasets.
+
+Create a matrix scatterplot for the variables in the mtcars data.
+With which variables is mpg highly associated?
+```{r}
+data(mtcars)
+pairs(mtcars[, c(1, 2:6)], main = "Scatter Plot Matrix for mtcars Dataset subset1")
+```
+```{r}
+pairs(mtcars[, c(1, 7:11)], main = "Scatter Plot Matrix for mtcars Dataset subset2")
+```
+With which variables is mpg highly associated?
+The mpg is highly associated with cyl, disp, hp, wt, drat.
+
+Which pair of variables in the mtcars data has the highest correlation?
+(Hint: use the cor() function. )
+```{r}
+cor(mtcars)
+```
+
+The correlation coefficient between disp and wt is the highest, which is 0.8879799.
+
+4. Download historical weather data for Indian cities from kaggle. Create your own interesting visualization(s) and discuss.
+```{r}
+wd1 <- read.csv('Bangalore_1990_2022_BangaloreCity.csv', header=TRUE)
+wd2 <- read.csv('Chennai_1990_2022_Madras.csv', header=TRUE)
+wd3 <- read.csv('Lucknow_1990_2022.csv', header=TRUE)
+wd4 <- read.csv('Delhi_NCR_1990_2022_Safdarjung.csv', header=TRUE)
+
+par(mfrow=c(2,2))
+s1 <- plot(wd1$tmax, cex  = 0.2,xlab="Date count", ylab="Tmax", main="Bangalore")
+s2 <- plot(wd2$tmax, cex  = 0.2,xlab="Date count", ylab="Tmax", main="Chennai")
+s3 <- plot(wd3$tmax, cex  = 0.2,xlab="Date count", ylab="Tmax", main="Lucknow")
+s4 <- plot(wd4$tmax, cex  = 0.2,xlab="Date count", ylab="Tmax", main="Delhi_NCR")
+
+```
+
+
+```{r}
+boxplot(wd1$tmax,main="Bangalore", notch = TRUE)
+```
+
+From the scatter plots of tmax data for Bangalore City, Chennai, Lucknow", Delhi spanning from 1990 to 2022, it's evident that there's a fluctuating pattern in the maximum temperature values. This is consistent with the expectation that temperature follows a seasonal trend. As for the box plot displaying the tmax data for Bangalore City from 1990 to 2022 with the notch, it shows the confidence interval around the median and more ouliers lie at the lower part of the figure.
+
+
+5. Find and discuss an example of unethical data visualization.
+
+Data manipulation is a kind of unethical data visualization, for example by changing the threshold of data value or the y axis of the plot of the data to mislead the reader, which can exaggerate differences or downplay certain aspects of the data. This form of misinformation arises when the creators of the graph deviate from standard practices by adjusting the y-axis. The customary approach to y-axis arrangement involves commencing from zero and extending upward to encompass the highest data point within your dataset. When the y-axis origin is not set at zero, minor disparities appear exaggerated, potentially appealing more bias than the original plot.
+
+
+
