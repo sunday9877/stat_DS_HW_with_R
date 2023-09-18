@@ -1,0 +1,184 @@
+---
+title: "HW2"
+output: pdf_document
+date: "2023-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1.	The PrisonStress data in the R package PairedData gives the PSS (stress measurements) for  people at the time of their entry into a prison and at the time of exit. A few of these prison inmates were trained in a sport during their imprisonment. The groups are indicated by Sport and Control.
+a.	Consider only the group who got sport training during their time in prison. Do the data indicate that sport training can be helpful in reducing average stress in inmates? State the null and alternative hypotheses, carry out a suitable paired procedure, and explain your conclusion. Hint: argue that you are looking at paired data.
+
+```{r}
+library(PairedData)
+library(ggplot2)
+library(gridExtra)
+library(car)
+data(PrisonStress)
+str(PrisonStress)
+head(PrisonStress, 5)
+```
+```{r}
+# The sport group box plot
+s <- split(PrisonStress, PrisonStress$Group)
+boxplot(s$Sport$PSSbefore,s$Sport$PSSafter, names = c("PSSbefore","PSSafter"))
+```
+
+```{r}
+# norm qq plot
+par(mfrow=c(1,2))
+
+p1 <- qqPlot(s$Sport$PSSbefore)
+p2 <- qqPlot(s$Sport$PSSafter)
+```
+
+
+```{r}
+#norm test
+#shapiro.test(s$Sport$PSSbefore) 
+#shapiro.test(s$Sport$PSSafter) 
+#the differences between two sets of values
+sd <- s$Sport$PSSafter - s$Sport$PSSbefore
+shapiro.test(sd) 
+```
+shapiro.test
+H0: The dataset is normally distributed.
+H1: The dataset is not normally distributed.
+The observed p-values of the difference between 2 datasets are greater than 0.05, failed to reject H0, supporting the normality assumption of the dataset. So, we can apply paired t test to the dataset.
+
+
+T-test
+H0: The mean difference of stress level is 0 between the time of the entry into a prison and at the time of exit in the sport groups.
+H1: The mean difference of stress level is not 0 between the time of the entry into a prison and at the time of exit in the sport groups.
+
+```{r}
+t.test(s$Sport$PSSbefore,s$Sport$PSSafter, paired = TRUE)
+```
+p-value = 0.0178 is smaller than 0.05, reject H0, the mean difference is not 0. 
+Based on the results of the paired t-test, we conclude that there is strong evidence to suggest that the sport exercise led to a significant reduction in stress. The mean reduction is 3.933333, with a 95% confidence interval between  0.7904329 and 7.0762338.
+
+b.	At exit, we wish to compare the mean stress levels between the Sport and Control groups. Graphically and numerically summarize the sample information at exit time from the two groups. Hint: argue that now we are looking at two independent samples.
+The samples are independet since they are drawn from entirely different groups or populations, and there is no overlap or interaction between these groups, thus they can be considered independent. 
+Hypotheses
+H0: The mean stress level is the same in the 2 groups.
+H1: The mean stress level in the sport group of prison is different between the corresponding level in the control group
+```{r}
+# The stress at exit
+with(PrisonStress,boxplot(PSSafter~Group,ylab="Stress at the exit"))
+```
+
+```{r}
+ggplot(PrisonStress, aes(sample=PSSafter,shape=Group, color=Group)) + stat_qq()+ stat_qq_line()
+```
+
+```{r}
+shapiro.test(s$Control$PSSafter) 
+shapiro.test(s$Sport$PSSafter) 
+```
+shapiro.test Hypotheses
+H0: The dataset is normally distributed.
+H1: The dataset is not normally distributed.
+The observed p-values are greater than 0.05 in each case, failed to reject H0, supporting the normality assumption of the 2 dataset.
+
+
+c.	Do the variances of the two populations appear to be the same? Verify graphically, and using a suitable statistical test.
+```{r}
+ggplot(PrisonStress, aes(x=Group, y=PSSafter, fill=Group)) + geom_boxplot(show.legend = F)
+```
+H0: The ratio of variances is 1
+H1: The ratio of variances is not equal to 1.
+```{r}
+var.test(s$Control$PSSafter,s$Sport$PSSafter) 
+```
+p-value = 0.8951 is larger than 0.05, failed to reject H0, the variances is equal.
+
+d.	Using a suitable -procedure, verify whether the mean stress levels between the two groups at exit are the same.
+By assume normality and equal variance, we can use Pooled t Procedure.
+Hypotheses
+H0: the mean is equal.
+H1: The mean is not equal.
+```{r}
+result <- t.test(s$Control$PSSafter,s$Sport$PSSafter, var.equal = TRUE)
+result
+```
+p-value is 0.192, which is greater than 0.05, failed to reject H0. Thus, the difference in means is equal to 0. The mean is the same.
+
+e.	Compute and interpret Cohen’s d. 
+
+```{r}
+library(effsize)
+
+cohen.d(s$Control$PSSafter,s$Sport$PSSafter)
+```
+The cohen d is d 0.5328796, meaning the means is 0.5328796 standard deviation lower in the sport group than the control group, which is a Medium Effect size and the Cohen's d is positive, denotes a positive effect on the stress compared to the control group and the finding may have some practical applications. Thus, the stress at exit is lower in the sport group than the control group with medium effect size. The interval between -0.3004769 and 1.3662361 provide a range within which the true effect size is likely to fall.
+
+
+2.	The Loblolly data in R shows the heights of  Loblolly pine trees, along with the age and seed source for each tree. Suppose that scientists are interested in seeing whether the average heights of trees aged 20 years and 25 years are the same. Analyze the data in detail and describe your conclusion. Hint: I have not asked specific questions in parts (a), (b), etc., but your detailed analysis must reflect details similar to Question 1.
+
+
+Since the heights are measured on the same tree(same seed number), we can treat the 20, 25-year height as a Paired data average comparing.
+
+```{r}
+data("Loblolly")
+subset <- Loblolly[Loblolly$age == 20 | Loblolly$age == 25,]
+head(subset)
+```
+```{r}
+boxplot(subset$height ~ subset$age, 
+        main = "Boxplot of Tree Height by Age on Subsetted Data",
+        xlab = "Age", ylab="Height (ft)")
+```
+```{r}
+par(mfrow=c(1,2))
+a <- split(subset, subset$age)
+p1 <- qqPlot(a$"20"$height)
+p2 <- qqPlot(a$"25"$height)
+```
+
+```{r}
+shapiro.test(a$"20"$height) 
+shapiro.test(a$"25"$height) 
+#the differences between two sets of values
+ad <- a$"25"$height - a$"20"$height
+shapiro.test(ad) 
+```
+shapiro.test Hypotheses
+H0: The dataset is normally distributed.
+H1: The dataset is not normally distributed.
+The observed p-values of the  2 datasets are greater than 0.05, failed to reject H0, supporting the normality assumption of the 2 datasets.
+
+For the "ad", The observed p-values 0.001781 is smaller than 0.05, reject H0, The difference value "ad" is not normally distributed. Thus, we cannot apply Paired t-Procedure
+```{r}
+par(mfrow=c(1,2))
+hist(ad)
+qqPlot(ad)
+```
+From the histgram and normall qq plt, we can see the difference dataset is right skewed and not symmetric. So, we cannot apply Paired Wilcoxon Signed-Rank Procedure either. Thus, we can omly use Paired Fisher’s Sign Procedure.
+
+Hypotheses
+H0: The median difference of height between age 20 and 25 is 0.
+H1: The median difference of height between age 20 and 25 is not equal to 0.
+
+```{r}
+library("BSDA")
+SIGN.test(a$"20"$height,a$"25"$height)
+```
+The p-value = 0.0001221, which is significant smaller than 0.05, thus reject H0. The median difference is not equal to 0. 
+The sample estimates with a median difference -8.820714, which indicate the median at age 20 is 8.405 less than the 25's with a 95 percent confidence interval:[-9.548165 -8.253363]. 
+Since the 20's and 25's height datasets pass the shapiro.test supporting the normality assumption of the 2 datasets. And the normal distribution is a symmetrical, bell-shaped distribution in which the mean, median and mode are all equal. The average height is also not the same between the age 20 and 25.
+
+
+3.	Suppose you are looking at two independent samples and wish to compare the averages of the populations from which these samples are drawn. If you determine that the two-sample pooled -test is suitable based on verifying the assumptions, will Wilcoxon’s rank-sum test also be suitable? Discuss why. If yes, which of these two tests would you recommend, and why?
+
+If the two-sample pooled t-test is suitable, then the datasets are both Normality shape and have equal variances. So the 2 datasets have the same shape and can be applied with Wilcoxon’s rank-sum test. I would recommend the two-sample pooled t-test.
+
+Firstly, the statistical power of a hypothesis test is the probability of correctly rejecting a null hypothesis when the alternative hypothesis is true. The statistical power of a test depends on several factors, including the sample size, the significance level (alpha), the effect size, and the specific statistical test being used. When the assumptions of t test are met, it is generally more powerful than the Wilcoxon rank-sum test. This means that it has a higher chance of correctly detecting a true difference between the two groups when it exists. Secondly, t-test is a test comparing means, while Wilcoxon’s tests the ordering of the data(median) In this case, we are comparing the average of the data. So, the t test may be more appropriate.
+
+4.	Select and read any valid writeup (article or blog) about the p-value controversy and p-value interpretation. Write a short report (one to two paragraphs) about your take-away on this topic as an emerging data scientist.
+
+This article called The Significant Problem of P Values starts with the one-century history of p-value and discusses the overuse of p-value especially in the scientific field. There is increasing attention to reforming statistical analysis, yet there is divergence among researchers regarding whether it should undergo minor adjustments or a complete change. The p-value controversy includes the misuse and misinterpretation of p-values in hypothesis testing. While p-values can provide us with valuable information about the strength of testing against a null hypothesis, they have been widely criticized for misinterpretation of p-values as a measurement of truth or falsehood. P-values only quantify the strength of evidence against the null hypothesis. Additionally, low p-values do not necessarily imply practical significance, and the significance level (e.g., p < 0.05) is often arbitrarily chosen by their creator. 
+
+There are changes happening within the scientific establishment as they acknowledge that p-values are at times excessively relied upon or misconstrued. The notion that a treatment is effective when p < 0.05 and ineffective when p > 0.05 is seen as an oversimplified perspective on medical research that may not consistently align with real-world scenarios. In many research reports, there is a decreasing emphasis on p-values, and instead, more results are presented alongside confidence intervals. Furthermore, the journal has started practices such as the publication of detailed research protocols and the enforcement of pre-established analysis plans, with an obligation to disclose any deviations from these plans. Another takeaway from this article is the importance of careful and responsible use of p-values in scientific research. We should treat p-values as just one piece of evidence and consider other measurements such as effect sizes, confidence intervals, and the broader context of the studies into count. We should also be aware of the limitations of p-values and avoid simply thinking of results as "significant" or "non-significant" solely based on p-value thresholds. 
+
