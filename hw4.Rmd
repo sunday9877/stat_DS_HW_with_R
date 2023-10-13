@@ -1,0 +1,250 @@
+---
+title: "hw4"
+output: pdf_document
+date: "2023-09-25"
+---
+
+Q1
+The statement indicates that in a one-factor analysis of variance (ANOVA), the calculated F-statistic is exceptionally small. The F-statistic is a measure used to assess whether there are significant differences among the means of multiple groups. In this case, the small F-statistic suggests that there is very little variation in the group means being compared and the probability (p-value) of obtaining an F-statistic as small as or smaller than the one obtained from the actual data is extremely low, specifically 0.00004 (or 0.004%).
+
+Interpretation:
+
+1. F-Statistic: The F-statistic being very small suggests that there is very little variation between the group means relative to the variation within the groups. In other words, the groups are very similar in terms of their means.
+
+2. p-value: The low probability (p-value) of 0.00004 indicates that the observed F-statistic is highly unlikely to occur by chance alone. In statistical hypothesis testing, when the p-value is very small (e.g. below a chosen significance level 0.05), it suggests strong evidence against the null hypothesis.
+
+3. Conclusion: the observed data provides strong statistical evidence that there are significant differences in means among the groups. The small F-statistic and low p-value indicate that the differences are not likely due to random chance but are likely due to real differences between the groups.
+
+Q2
+a
+```{r}
+library(ACSWR)
+data("tensile")
+
+anova_model <- aov(Tensile_Strength ~ CWP, data = tensile)
+
+summary(anova_model)
+```
+H0: equal Tensile_Strength mean in all levels of CWP
+H1: at least one level of CWP's Tensile_Strength mean is different.
+
+The effects of the levels of CWP can be explained as SSA that is the Sum of Squares due to levels of CWP, which is 33.6. F-Statistic is 1.282 < 4.28(F(df = 1,23) according to the f table) at significance level of 0.05, which is not significant at that level of probability, p-value is 0.269 > 0.05 at the significance level of 0.05, failed to reject H0. Thus, the data does not provide evidence to reject H0(failed to reject H0), we conclude that the levels of the factor have no significant effect on the Tensile_Strength means, and the means of Tensile_Strength are the same at all levels of CWP.
+b
+```{r}
+pred.CWP <- expand.grid(CWP=unique(tensile$CWP))
+lsmeans <- predict(anova_model, newdata=pred.CWP, se=TRUE, interval="confidence")
+cbind(pred.CWP, lsmeans$fit)
+```
+c
+```{r}
+# All pairs, Bonferroni multiple comparison correction
+pairwise.t.test(tensile$Tensile_Strength, tensile$CWP, 
+            p.adjust.method = "bonf")
+```
+H0: the means are equal in 2 compared groups.
+H1: The means are not equal.
+
+The output table shows the Bonferroni adjusted p-value for comparing each pair. The p-values below the significance level indicate statistically significant differences between the groups. We choose significance level of 0.05 here.
+Thus, CWP15 and CWP25, CWP30 and CWP15, CWP30 and CWP35, CWP30 and CWP20, CWP25 and CWP35, CWP30 and CWP35 have p-values < 0.05 reject H0 at significance level of 0.05, are significantly different at significance level of 0.05, while CWP15 and CWP20, CWP15 and CWP35, CWP20 and CWP25, CWP20 and CWP35, CWP25 and CWP30  are not, which have p-values > 0.05 fail to reject H0 at significance level of 0.05.
+
+d
+```{r}
+aov1 <- aov(Tensile_Strength ~ as.factor(CWP), data = tensile)
+TukeyHSD(aov1)
+```
+At the 5% significance level, the comparison between levels 35-15, 25-20, 35-20, 30-25 are not significant which have p-values > 0.05 fail to reject H0 at significance level of 0.05., the other groups are significant after accounting for multiple testing. The difference in means are mostly positive except for group 35-20, 35-25, 35-30.
+
+e
+```{r}
+library(effsize)
+cohen_d <- cohen.d(tensile$Tensile_Strength, tensile$CWP)
+cohen_d
+```
+
+The effect size is large, which indicates that the cwp level has a substantial impact on Tensile Strength in the dataset.
+
+
+```{r}
+##cohen inter comparison
+
+# levels of CWP
+cwp_levels <- c(15, 20, 25, 30, 35)
+
+# Create an empty vector to store Cohen's d values
+cohen_d_values <- vector("numeric", length(cwp_levels))
+
+# Loop through the CWP levels and calculate Cohen's d for each comparison
+for (i in 1:4) {
+  for (j in (i + 1):length(cwp_levels)) {
+    group1 <- tensile$Tensile_Strength[tensile$CWP == cwp_levels[i]]
+    group2 <- tensile$Tensile_Strength[tensile$CWP == cwp_levels[j]]
+    
+    # Calculate Cohen's d for the comparison
+    cohen_d <- cohen.d(group1, group2)
+    # Print the Cohen's d values for each comparison
+    cat("cwp_levels",cwp_levels[i],",cwp_levels",cwp_levels[j])
+    print(cohen_d)
+
+  }
+}
+
+```
+
+The effect size of different CWP levels are all large except for the group cwp_levels 15 and cwp_levels 35, which indicates that the cwp level has a substantial impact on Tensile Strength in these dataset.
+
+
+Q3
+a
+```{r}
+library(ggplot2)
+data(ToothGrowth)
+# Create a boxplot to visualize the relationship between CWP and tensile strength
+boxplot(len ~ dose, data = ToothGrowth, xlab = "dose", ylab = "tooth length",
+        main = "Effect of dose on tooth length")
+```
+```{r}
+# Shapiro-Wilk test for normality
+shapiro_test <- shapiro.test(ToothGrowth$len)
+
+# Perform Bartlett's test for equality of variances
+bartlett_test <- bartlett.test(ToothGrowth$len, ToothGrowth$dose)
+
+# Print the results
+print(shapiro_test)
+print(bartlett_test)
+```
+The Side-by-side boxplots show that there are no differences in variance of len between dose levels.
+
+shapiro.test Hypotheses
+H0: The dataset is normally distributed.
+H1: The dataset is not normally distributed.
+
+The observed p-values is 0.1091 greater than 0.05, failed to reject H0 at the significance level of 0.05, supporting the normality assumption of the dataset at 0.05 significance level. And Bartlett's test assumes that the populations being compared are normally distributed. So, we can apply Bartlett's test in this case.
+
+Bartlett's test
+H0: Equal variance in all groups
+H1: At least one group's variance is different.
+
+For Bartlett's test, the p-value is 0.717 larger than 0.05, failed to reject H0 at the significance level of 0.05. the variances are equal at 0.05 significance level.
+For Levene's test, the p-value is s 0.8626 larger than 0.05, it also suggests that failed to reject H0 at the significance level of 0.05. So, the variances are equal at 0.05 significance level.
+
+```{r}
+aovmod <- aov(len ~ dose, data = ToothGrowth)
+summary(aovmod)
+```
+```{r}
+qf(0.95,1,58)
+```
+
+H0: equal tooth length mean in all dose groups.
+H1: at least one dose group's tooth length mean is different.
+
+The F-Statistic is 105.1 > 4.01(F(df = 1,58)according to the f table) at significance level of 0.05, which is significant at that level of probability, p-value is 1.23e-14 < 0.05 at the significance level of 0.05, reject H0, there are significant differences between groups means. Thus, we conclude that there are significant differences in tooth length between at least two of the "dose" groups.
+
+```{r}
+library(effsize)
+
+cohen.d(ToothGrowth$len, ToothGrowth$dose)
+```
+The effect size is large, which indicates that the dose has a substantial impact on tooth length in the dataset.
+
+b.
+```{r}
+boxplot(len ~ supp, data = ToothGrowth, xlab = "supp", ylab = "tooth length",
+        main = "Effect of supp on tooth length")
+```
+```{r}
+# Perform Bartlett's test for equality of variances
+bartlett_test <- bartlett.test(ToothGrowth$len, ToothGrowth$supp)
+
+# Print the results
+print(bartlett_test)
+```
+The Side-by-side boxplots show that there are no differences in variance of len between dose levels.
+
+Bartlett's test
+H0: Equal variance in 2 groups
+H1: one group's variance is different than other.
+
+For Bartlett's test, the p-value is 0.2331 larger than 0.05, failed to reject H0 at the significance level of 0.05. the variances are equal at 0.05 significance level.
+
+```{r}
+aovmod <- aov(len ~ supp, data = ToothGrowth)
+summary(aovmod)
+```
+H0: equal tooth length mean in all supp groups.
+H1: at least one supp group's tooth length mean is different.
+
+The F-Statistic is 3.668 < 4.01(F(df = 1,58)according to the f table) at significance level of 0.05, which indicate data not significant at that level of probability, p-value is 0.0604 > 0.05 at the significance level of 0.05, fail to reject H0, there are no significant differences between groups means. Thus, we conclude that there are no significant differences in tooth length between supp groups.
+```{r}
+cohen.d(ToothGrowth$len, ToothGrowth$supp)
+```
+The effect size is small, which indicates that the supp doesn't have a substantial impact on tooth length in the dataset.
+
+
+c.
+H0: There is no difference in group means at any level of the dose.
+H1: There is difference in group means at any level of the dose.
+
+H0: There is no difference in group means at different supp.
+H1: There is difference in group means at any different supp.
+
+```{r}
+model <- aov(len ~ dose + supp, data = ToothGrowth)
+
+# Summary of the ANOVA results
+summary(model)
+```
+```{r}
+qf(0.95,1,57)
+```
+The additive two-factor ANOVA is used to examine the main effects of both "dose" and "supp" on tooth length independently. Here the F-Statistic are both larger than 4.01(F(df = 1,57)according to the f table) at significance level of 0.05, which indicate data is significant at that level of probability. The p-values are both smaller than 0.05 at the significance level of 0.05, reject H0, there are significant differences between groups means. Thus, we conclude that there are significant effect in tooth length from doses and supp groups.
+
+
+d
+```{r}
+interaction <- aov(len ~ dose * supp, data = ToothGrowth)
+summary(interaction)
+```
+A two-way ANOVA with interaction tests three null hypotheses at the same time:
+
+H0: There is no difference in group means at any level of the dose.
+H1: There is difference in group means at any level of the dose.
+
+H0: There is no difference in group means at different supp.
+H1: There is difference in group means at any different supp.
+
+H0: The effect of one independent variable does not depend on the effect of the other independent variable.
+H1: The effect of one independent variable depend on the effect of the other independent variable.
+
+There is no difference in group means at any level of the second independent variable.
+The effect of one independent variable does not depend on the effect of the other independent variable (a.k.a. no interaction effect).
+```{r}
+qf(0.95,1,56)
+```
+The two-factor ANOVA with interaction is used to assess not only the main effects of "dose" and "supp" on tooth length but also how these factors interact with each other, potentially influencing the response len in a more complex way.
+The main effect of "dose" is significant indicated by a F-Statistic larger than 4.01(F(df = 1,57))at significance level of 0.05 and a p-values far smaller than 0.05 at the significance level of 0.05, it means that "dose" has a significant impact on tooth length, regardless of the "supp" factor. Same for the effect of "supp"
+
+The interaction "dose:supp" is significant supported by a F-Statistic larger than 4.01(F(df = 1,57))at significance level of 0.05 and a p-values far smaller than 0.05 at the significance level of 0.05. This suggests that the two factors interact to influence tooth length in a non-additive way.
+
+```{r}
+panelA <- lm(len ~ as.factor(dose) * as.factor(supp), data = ToothGrowth)
+library(emmeans) 
+marginal <- lsmeans(panelA, pairwise ~ dose:supp, adjust="tukey")
+marginal$contrasts
+```
+At the 5% level, most of the comparisons are significant except for dose0.5 OJ - dose1 VC ,  dose1 OJ - dose2 OJ , dose1 OJ - dose2 VC, dose2 OJ - dose2 VC.
+
+
+e.
+From a We learned that the "dose" of the supplement has a significant impact on tooth length. The large effect size tells us the proportion of variance in tooth length explained by "dose."
+
+(b) We learned that the "supp" factor (VC or OJ) also has a significant impact on tooth length. but there are no significant differences in tooth length between supp groups.The small effect size  indicates that the supp doesn't have a substantial impact on tooth length in the dataset.
+
+(c) In the additive two-factor ANOVA without interaction, we examined both "dose" and "supp" independently. We found that both factors have significant main effects on tooth length.
+
+(d) In the two-factor ANOVA model with interaction, we explored not only the main effects of "dose" and "supp" but also their interaction. An interaction implies that the effect of one factor depends on the level of the other factor. The result suggests that the two factors interact to influence tooth length in a non-additive way.
+
+In summary, from a,b we use one factor ANOVA to test equality of the means of different groups in each factor. From c,d, we test the 2 factors independently then test their interaction. We learned that 
+1.The supp factor may not have a significant impact in one factor test, but it shows significant impact on length in two factor test 
+2.Both "dose" and "supp" have significant effects on tooth length, and there is an interaction between the two factors.

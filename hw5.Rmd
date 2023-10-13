@@ -1,0 +1,400 @@
+---
+title: "hw5"
+output: pdf_document
+date: "2023-10-02"
+---
+
+1a
+```{r}
+library(readr)
+#library(tidyverse)
+house = read_csv("/Users/sangdi/STAT5405/week5/kchouse.csv")
+```
+```{r}
+# scatterplot of house prices versus area of the living room
+with(house, {
+  plot(sqft_living, price, main=NA, xlab= "sqft_living", ylab="price", pch=20, 
+       col=2, cex=.5)
+})
+```
+
+Based on the scatterplot, there's a clear upward trend between the house price and living area, it suggests a correlation between the two variables.
+
+b
+```{r}
+house$logprice <- log(house$price)
+library(ggplot2)
+
+
+ggplot(house, aes(x = sqft_living, y = logprice)) +
+  geom_point() +              # Add points for the scatterplot
+  geom_smooth(method = "lm") + # Add a linear regression line
+  labs(x = "Living Room Area (sqft)", y = "Log House Price") + # Label axes
+  ggtitle("Scatterplot of Log House Prices vs. Living Room Area with Linear Regression Line")
+
+```
+```{r}
+cor <- cor(house$logprice, house$sqft_living)
+cor
+```
+From the Scatterplot of Log House Prices vs. Living Room Area, it shows a clear pattern that points following a straight line, which confirms the potential of a linear relationship between the log transform of house prices and the living room area. The blue line in the plot is the linear regression line that best fits the data and most of the scatter points are around the blue line. It represents there could be a linear relationship between log house prices and living room area.
+
+
+
+c
+```{r}
+cor <- cor(house$logprice, house$sqft_living)
+cor
+```
+The correlation coefficient of 0.6953406 indicates a moderate to strong positive linear relationship between the log transform of house prices and the living room area. Nonetheless, it's crucial to keep in mind that a correlation does not establish causation between these 2 variables. Even when a strong correlation exists, it doesn't automatically imply that alterations in living room area directly influence shifts in house prices. There might be other variables or hidden factors influencing the observed relationship.
+
+
+d
+```{r}
+model <- lm(logprice ~ sqft_living, data = house)
+
+summary(model)
+```
+
+
+
+The estimate intercept is 1.222e+01 that represents the estimated log price when the living room area is zero. However, it's important to note that this interpretation may not be meaningful in practice because living room area cannot be zero or negative.
+The slope is 3.987e-04 that represents the estimated change in log price for a 1 increase in living room area. which suggests that as the living room area increases, log prices tend to increase 3.987e-04.
+
+According to the fitted model, there is a positive linear relationship between the log of house prices (logprice) and living room area (sqft_living) that can be written as: log(house_price) = 12.22 + 0.0003987 * sqft_living.
+
+The implication regarding the relationship between price and living room area is that an increase in living room area is linked to a proportional change in price. 
+
+
+
+e
+```{r}
+# Histogram of residuals
+hist(residuals(model))
+
+```
+
+```{r}
+par(mfrow=c(2,2))
+plot(model) 
+
+```
+
+qq residuals plot
+
+Most of the points lie about a straight line except the last part of data(tail) and point 12778 deviate substantially from the line in the tails in the qq residuals plot, it may indicate a problem with the normality assumption.
+Scale-Location plot
+
+From the Scale-Location Plot, also known as a Spread-Location Plot or Sqrt-Standardized Residuals vs. Fitted Values Plot , the points are spread evenly at first with no clear pattern as moving along the x-axis. At the tail of the data, the points fan out or form a funnel shape, which may suggests heteroscedasticity, meaning that the variance of residuals is not consistent across the range of fitted values. Heteroscedasticity can indicate that the model's errors have non-constant variance, which can affect the validity of statistical tests and the reliability of coefficient estimates.
+
+```{r}
+library(lmtest)
+bptest(model)
+```
+Breusch-Pagan Test
+Null Hypothesis (H0): Homoscedasticity is present (the residuals are distributed with equal variance)
+Alternative Hypothesis (HA): Heteroscedasticity is present (the residuals are not distributed with equal variance)
+The test statistic is 99.064 and the corresponding p-value is < 2.2e-16. Since the p-value is significant less than 0.05, we reject the null hypothesis at the significance level of 0.05. Heteroscedasticity is present.
+
+
+
+f
+```{r}
+par(mfrow=c(2,2))
+plot(model) 
+
+```
+
+
+
+Yes, there are outlying observations from the residuals plots, the points 12778 clearly deviated in these plots.
+
+The presence of outliers may seriously bias parameter estimation and inference in the MLR model
+
+
+
+```{r}
+#find outlier
+extpts <- which(abs(residuals(model)) > 3*sd(residuals(model)))
+
+n <- nrow(house)
+p <- ncol(house)-1
+#identify the leverage
+hilev <- which(influence(model)$hat > max(2*(p+1)/n,0.5))
+extpts 
+hilev
+# Remove outliers, there is no leverage point
+data_cleaned <- house[-extpts,]
+
+
+# Refit the SLR model 
+model_cleaned <- lm(logprice ~ sqft_living, data = data_cleaned)
+
+# Print summaries of both models
+summary(model)
+
+# Print a summary of the cleaned model
+summary(model_cleaned)
+
+```
+
+Outliers can significantly impact the regression line, especially if they are influential points. 
+Influence on Slope: Outliers can significantly influence the slope of the regression line. In an SLR model, the line is fitted to minimize the sum of squared residuals. If an outlier has a large residual, it can pull the line toward itself, affecting the slope. Same for the  Intercept. Outliers  can shift the intercept.
+Goodness of Fit: Outliers can reduce the goodness of fit of the model, as they contribute to larger residuals and a higher residual standard error.
+R-squared Value: The presence of outliers can decrease the R-squared value, as they introduce additional variability that the model may not account for.
+Statistical Significance: Outliers can affect the statistical significance of the model coefficients. In some cases, coefficients may no longer be statistically significant with outliers present.
+Prediction Accuracy: The presence of outliers can reduce the accuracy of predictions, as the model may not generalize well to new data when influenced by extreme observations.
+
+After removing the outliers, the refit model have the nearly the same intercept and R-squared value, which may caused by the large sample size that reduce the effect of outliers. There is also a bigger slope due to more outliers at small value.
+
+g
+
+```{r}
+summary(model)
+
+qf(0.95,1,21611)
+
+```
+
+```{r}
+# Calculate confidence intervals for slope and intercept (95% confidence intervals)
+conf_interval_slope <- confint(model)["sqft_living", ]
+conf_interval_intercept <- confint(model)["(Intercept)", ]
+
+# Print confidence interval estimates
+cat("95% Confidence Interval for Slope (True Coefficient of area):", conf_interval_slope, "\n")
+cat("95% Confidence Interval for Intercept (True Intercept of the Regression Line):", conf_interval_intercept, "\n")
+
+```
+
+
+H0: $\beta_0$ and $\beta_1$ are 0.
+H1: at least one of $\beta_0$ and $\beta_1$ is nonzero.
+
+The F-statistic in the output has the value 2.023e+04 > 3.841889 (F(df = 1,21611)according to the f table) at significance level of 0.05, which indicate data is significant at that level of probability. The p-values is also significantly smaller than 0.05 at the significance level of 0.05, reject H0, at least one of $\beta_0$ and $\beta_1$ is significantly nonzero. The data provides sufficient evidence to reject H0 at significance level of 0.05 and claim that sqrt_living explain log house price. 
+The 95% Confidence Interval for Slope (True Coefficient of area)is between 0.0003932515 and 0.0004042416 .
+The 95% Confidence Interval for Intercept (True Intercept of the Regression Line) is between 12.20597 and 12.23096. 
+
+
+
+h.
+
+```{r}
+sqft_living_pred <- 1500
+
+# the log price
+log_price_1500 <- predict(model, newdata = data.frame(sqft_living = sqft_living_pred), interval = "prediction", level = 0.95)
+
+log_price_1500
+
+predicted_log_price <- log_price_1500[1]
+lower_limit <- log_price_1500[2]
+upper_limit <- log_price_1500[3]
+
+
+predicted_price <- exp(predicted_log_price)
+lower_price_limit <- exp(lower_limit)
+upper_price_limit <- exp(upper_limit)
+
+# Print the results
+cat("Expected Log Price at 1500:", predicted_log_price, "\n")
+cat("95% Prediction Interval for expected Log Price:", lower_limit, "to", upper_limit, "\n")
+cat("Expected house Price:", predicted_price, "\n")
+cat("95% Prediction Interval for house Price:", lower_price_limit, "to", upper_price_limit, "\n")
+
+
+```
+The predict logprice is 12.81658 with a 95% confidence interval [12.07462, 13.55855].
+Transformed price is 368274.5 with a 95% confidence interval [175364.1, 773397.1 ], which is a very large range indicated the logprice linear regression may not be a good indicator of house price base on living area.
+
+2a.
+
+
+```{r}
+library(carData)
+library(car)
+data(Duncan)
+hist(Duncan$income)
+hist(Duncan$education)
+scatterplotMatrix(~income + education, data=Duncan, 
+                  id=list(n=2))
+
+ggplot(data = Duncan, aes(x = education, y = prestige)) +
+  geom_point() +
+  labs(x = "Education", y = "Prestige") +
+  ggtitle("Scatterplot of Education vs. Prestige")
+```
+```{r}
+ggplot(data = Duncan, aes(x = income, y = prestige)) +
+  geom_point() +
+  labs(x = "Income", y = "Prestige") +
+  ggtitle("Scatterplot of Income vs. Prestige")
+```
+Based on the scatterplots, there's a clear upward trend between the education and prestige, the income and prestige, it suggests education and income have a positive predictive effect on prestige.
+
+b
+```{r}
+Duncan$type1 <- factor(Duncan$type, levels = c("bc", "wc", "prof"))
+
+# boxplots
+ggplot(data = Duncan, aes(x = type1, y = prestige, fill = type)) +
+  geom_boxplot() +
+  labs(x = "Occupation Type", y = "Prestige") +
+  ggtitle("Boxplot of Prestige by Occupation Type")
+
+ggplot(data = Duncan, aes(x = type1, y = income, fill = type)) +
+  geom_boxplot() +
+  labs(x = "Occupation Type", y = "Income") +
+  ggtitle("Boxplot of Income by Occupation Type")
+
+```
+From the side by side barplots, we can see that prof level occupation enjoys (i) more prestige, and (ii) more income.
+
+c.
+
+```{r}
+library(lsmeans) # to perform pairwise comparisons
+library(phia) # for the interactionMeans function
+Duncan$type1 <- factor(Duncan$type, levels = c("bc", "wc", "prof"))
+fittedlm <- lm(prestige ~ type1+income+education, data = Duncan)
+summary(fittedlm)
+```
+```{r}
+qf(0.95,4,40)
+```
+
+H0: $\beta_0$ $\beta_1$,..., and $\beta_n$ are 0.
+H1: at least one of $\beta_0$ $\beta_1$,..., and $\beta_n$ is nonzero.
+
+The F-statistic in the output has the value of 105 on 4 and 40 DF greater than 2.605975, at significance level of 0.05, which indicate data is significant at that level of probability. The p-values is also significantly smaller than 0.05 at the significance level of 0.05, reject H0, at least one of $\beta_0$ $\beta_1$,..., and $\beta_n$ is significantly nonzero. The data provides sufficient evidence to reject H0 at significance level of 0.05 claim that there variables together explain presitge.
+
+The MLR of 0.9131 tells us that, while significant based on the F-statistic, the fitted model explains 91% of the variability in the response.
+
+So, the MLR of 0.9131 represents the proportion of the total sample variability
+(sum of squares) explained by the regression model, which indicates of how well the model fits the data.
+
+The Adjusted R-squared:  0.9044 represents the proportion of the mean sum of squares variance explained by the regression model, which takes into account the number of degrees of freedom and is preferable to R-squared.
+
+d.
+```{r}
+library(lsmeans) # to perform pairwise comparisons
+library(phia) # for the interactionMeans function
+#Duncan$typef <- as.factor(Duncan$type)
+lmo <- lm(prestige ~ type1*income*education, data = Duncan)
+summary(lmo)
+```
+```{r}
+qf(0.95,4,40)
+```
+
+H0: $\beta_0$ $\beta_1$,..., and $\beta_n$ are 0.
+H1: at least one of $\beta_0$ $\beta_1$,..., and $\beta_n$ is nonzero.
+
+The F-statistic in the output has the value 45.87 on 11 and 33 DF greater than 2.093254, at significance level of 0.05, which indicate data is significant at that level of probability. The p-values is also significantly smaller than 0.05 at the significance level of 0.05, reject H0, at least one of $\beta_0$ $\beta_1$,..., and $\beta_n$ is significantly nonzero. The data provides sufficient evidence to reject H0 at significance level of 0.05.
+
+The MLR of 0.9386 tells us that, while significant based on the F-statistic, the fitted model explains 94% of the variability in the response. 
+
+So, the MLR of 0.9386 represents the proportion of the total sample variability
+(sum of squares) explained by the regression model, which indicates of how well the model fits the data.
+
+The Adjusted R-squared:  0.9182 represents the proportion of the mean sum of squares variance explained by the regression model, which takes into account the number of degrees of freedom and is preferable to R-squared.
+
+Based on it, the education, income, and the levels of type have a predictive effect on prestige.
+
+
+
+Positive interaction coefficients between occutype1prof and income, indicate that the effect of the two predictors together is greater than the sum of their individual effects. The positive coefficient for "typeprof:income" (2.49297) suggests that for "typeprof," an increase in income is associated with an increase in prestige. This interaction term is statistically significant (p-value = 0.0445) at significance level of 0.05. Same for the typefprof:education that has a positive coefficient of 2.03495 and is statistically significant (p-value = 0.0225) at significance level of 0.05. The interaction between income:education is increasing with a coefficient of 0.03918 and is statistically significant (p-value = 0.0475) at significance level of 0.05. The interaction between typefprof:income:education is decreasing with a coefficient of 0.06008 and is statistically significant (p-value = 0.0123) at significance level of 0.05. The interaction between type1prof:income:education is decreasing with a coefficient of 0.05461 and is statistically significant (p-value = 0.0292) at significance level of 0.05. The interaction between typefwc:income and typefwc:education is not statistically significant (p-value = 0.1238 and 0.0763) at significance level of 0.05.
+
+
+
+e.
+```{r}
+par(mfrow=c(2,2))
+plot(lmo)
+```
+
+residuals vs. Fitted Values Plot:
+
+There is a random scatter of points around the horizontal line at zero in residuals vs. Fitted Values Plot, which means linearity. This model is a good fit with the plot of residuals versus fitted values show a random scatter without any pattern.
+
+qq residuals plot:
+
+Some points deviate substantially from the line in the tails in the qq residuals plot, it may indicate a problem with the normality assumption.
+
+Scale-Location plot:
+
+The roughly constant spread in Scale-Location plot suggests homoscedasticity of the data.
+
+Residuals vs. Leverage (Cook's Distance) Plot:
+
+The Outliers (minister) appears as points with large residuals and high leverage values.
+Cook's Distance measures the influence of each observation on the model, and points with high values may warrant further investigation.
+
+
+
+f.
+```{r}
+relmo <- lm(prestige ~ income+education, data = Duncan)
+summary(relmo)
+```
+```{r}
+qf(0.95,2,42)
+```
+
+
+H0: $\beta_0$ $\beta_1$,..., and $\beta_n$ are 0.
+H1: at least one of $\beta_0$ $\beta_1$,..., and $\beta_n$ is nonzero.
+
+The F-statistic in the output has the value 101.2 on 2 and 42 DF greater than 3.219942, at significance level of 0.05, which indicate data is significant at that level of probability. The p-values is also significantly smaller than 0.05 at the significance level of 0.05, reject H0, at least one of $\beta_0$ $\beta_1$,..., and $\beta_n$ is significantly nonzero. The data provides sufficient evidence to reject H0 at significance level of 0.05 claim that there variables together explain presitge.
+
+The MLR of 0.8282 tells us that, while significant based on the F-statistic, the fitted model explains 82% of the variability in the response.
+
+So, the MLR of0.8282 represents the proportion of the total sample variability
+(sum of squares) explained by the regression model, which indicates of how well the model fits the data.
+
+The Adjusted R-squared:  0.82 represents the proportion of the mean sum of squares variance explained by the regression model, which takes into account the number of degrees of freedom and is preferable to R-squared.
+
+
+
+g.
+
+```{r}
+#Partial regression plots
+car::avPlots(relmo)
+```
+This plot shows the relationship between education and prestige while controlling for the influence of income and any other predictors in the model. The significant slope in the plot suggests that education has an effect on prestige beyond what is explained by other predictors. Same for education plot, a significant slope in the data points that suggest the impact of income on prestige after accounting for other predictors. By examining these plots, we can better understand how education and income individually contribute to the prestige of individuals, while controlling for potential confounding factors.
+
+
+```{r}
+#partial residual plots
+prplot <- crPlots(relmo)
+```
+
+
+Partial Regression Plots:
+
+A partial regression plot shows the relationship between a specific predictor variable (e.g., education or income) and the response variable (prestige) while controlling for the effects of the other predictor variables in the model.
+The vertical axis represents the residuals from a regression model that includes all predictor variables except the one being plotted (e.g., education or income).
+The horizontal axis represents the values of the predictor variable being examined (e.g., education or income).
+The plot allows you to visualize the direct relationship between the predictor and the response, accounting for the influence of the other predictors.
+
+Partial Residual Plots:
+
+A partial residual plot shows the relationship between a specific predictor variable and the residuals from the full multiple linear regression model, including all predictor variables.
+In a Partial Residual Plots, the vertical axis represents the residuals from the full model, while the horizontal axis represents the values of the predictor variable being examined.
+The Partial Residual Plots allows you to visualize how the residuals change as the predictor variable changes, considering the joint effect of all predictors.
+
+
+1. Partial regression plots show the effect of adding an additional variable to the model and the relationship between a predictor and the residuals of the full model while holding all other predictors constant. In contrast, partial residual plots show the relationship between a predictor and the partial residuals, which are residuals after adjusting for the effects of all other predictors.
+2.  Partial regression plots help us visualize the unique contribution of a predictor while considering the influence of other predictors. Partial residual plots show the relationship between a predictor and the remaining variation in the response after accounting for other predictors.
+3. Both types of plots are used to assess the relationship between a predictor and the response while controlling for confounding effects. They are valuable for understanding the effect of a single predictor in a multiple regression context.
+4. Partial regression plots are most commonly used to identify leverage points and influential data points that might not be leverage points. Partial residual plots are most commonly used to identify the nature of the relationship between Y and Xi (given the effect of the other independent variables in the model).
+
+h.
+```{r}
+r2 <- 0.8282
+cohenfsquare <- r2/(1-r2)
+cohenfsquare
+```
+
+The cohen f square is 4.820722 siginificant larger than 0.35. So, it is a large effect size according to the general rule of conhen f square.

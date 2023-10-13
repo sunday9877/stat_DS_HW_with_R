@@ -1,0 +1,279 @@
+---
+title: "hw3"
+output: pdf_document
+date: "2023-09-19"
+---
+Q1
+a
+```{r}
+z_score = qnorm(0.025)
+z_score
+```
+b
+```{r}
+z_score975 = qnorm(0.975)
+z_score975
+```
+c
+```{r}
+# Set the confidence level
+confidence_level <- 0.95
+n1 <- 11
+n2 <- 13
+# Calculate the critical t-value
+df <- n1 + n2 - 2
+critical_t_value <- qt((1 - confidence_level) / 2, df)
+
+# Print the critical t-value
+cat("Critical t-value for a 95% CI:", critical_t_value, "\n")
+```
+d
+```{r}
+# Set the significance level (alpha)
+alpha <- 0.05
+
+# Degrees of freedom
+df <- 17
+
+# Calculate the chi-square value
+chi_square_value <- qchisq(1 - alpha, df)
+
+# Print the chi-square value
+cat("Chi-square value for a 95% confidence level (df = 17):", chi_square_value, "\n")
+
+```
+e
+```{r}
+# Set the significance level (alpha)
+alpha <- 0.05
+
+# Numerator degrees of freedom
+df1 <- 4
+
+# Denominator degrees of freedom
+df2 <- 18
+
+# Calculate the F-value
+f_value <- qf(1 - alpha, df1, df2)
+
+# Print the F-value
+cat("F-value for a 95% confidence level:", f_value, "\n")
+
+```
+Q2
+a
+```{r}
+library(vcd)
+library(grid)
+library(car)
+data("Arthritis")
+
+# Load the 'car' package
+
+
+# Recode levels 'Some' and 'Marked' to 'Improvement'
+Arthritis$Improved <- recode(Arthritis$Improved, "'Some'='Improvement'; 'Marked'='Improvement'")
+
+
+library(mosaic)
+table <- tally(~ Treatment + Improved, data = Arthritis, margins = T)
+table
+
+```
+b
+```{r}
+# Calculate the sample estimates
+p1 <- 28 / 41
+p2 <- 14 / 43
+
+# Print the sample estimates
+cat("Sample estimate of p1 (Treated):", p1, "\n")
+cat("Sample estimate of p2 (Placebo):", p2, "\n")
+```
+The sample estimate of p1 (Treated) is approximately 0.6829, which means that in the Treated group, about 68.29% of patients showed improvement.
+The sample estimate of p2 (Placebo) is approximately 0.3256, which means that in the Placebo group, about 32.56% of patients showed improvement.
+These sample estimates provide insights into the observed proportions of patients who improved in each treatment group based on the provided data.
+c
+```{r}
+# Sample estimates and sample sizes
+n1 <- 41
+n2 <- 43
+
+# Confidence level
+confidence_level <- 0.95
+
+# Calculate the standard error
+stde <- sqrt((p1 * (1 - p1) / n1) + (p2 * (1 - p2) / n2))
+
+# Calculate the margin of error
+margin_of_error <- qnorm(1 - (1 - confidence_level) / 2) * stde
+
+# Calculate the confidence interval
+ci_lower <- (p1 - p2) - margin_of_error
+ci_upper <- (p1 - p2) + margin_of_error
+
+# Print the confidence interval
+cat("95% Confidence Interval for (p1 - p2): [", ci_lower, ", ", ci_upper, "]\n")
+
+```
+d
+```{r}
+# Perform a two-sided hypothesis test
+test_result <- prop.test(x = c(sum(p1 * n1), sum(p2 * n2)), n = c(n1, n2), alternative = "two.sided", conf.level = 0.95)
+
+# Print the hypothesis test result
+print(test_result)
+
+```
+The p-value from the test is very small (smaller than 0.05), suggesting we reject H0: p1 = p2 at the 5% level of significance. p1 p2 are not equal at 0.05 significance level.The 95% C.I. is [0.1337610, 0.5809298] and does not include zero, showing that the two proportions are significantly different.
+Q3
+a
+```{r}
+#call the table
+table1 <- table[1:2,1:2]
+table2 <- table1[c("Treated","Placebo"),]
+table2
+
+```
+```{r}
+# Calculate the sample odds for Placebo and Treated groups
+odds_placebo <- 14 / 29
+odds_treated <- 28 / 13
+
+# Print the sample odds
+cat("Sample odds of improvement in Placebo group:", odds_placebo, "\n")
+cat("Sample odds of improvement in Treated group:", odds_treated, "\n")
+
+```
+The sample odds represent the odds of improvement in each group based on the provided data. If one group has higher sample odds than the other, it suggests a higher likelihood of improvement in that group based on the sample data.
+
+b
+```{r}
+library(epitools)
+# Calculate the Odds Ratio and its confidence interval
+odds_ratio_result <- oddsratio(table2)
+
+# Print the Odds Ratio and confidence interval
+print(odds_ratio_result)
+
+```
+The odds ratio (OR) estimate for Treated is 1.000000, which is the reference group. The OR estimate for treated versus Placebo is approximately 4.348751 with a 95% CI for the Placebo OR is [1.764176, 11.29343]. This interval provides a plausible range for the true OR.
+The OR for Placebo is greater than 1, indicating that the odds of improvement in the treament group are higher than in the Placebo group.
+The 95% CI for the OR does not include 1, suggesting a statistically significant difference.
+
+H0: there is no difference in odds between the two groups.
+H1: there is difference in odds between the two groups.
+The p-valuesfor Placebo are all less than 0.05 (reject the H0 at 5% significance level) suggests that the difference in odds between the two groups is statistically significant at significance level of 0.05.
+
+4.
+a
+```{r}
+# Load the ACSWR package and the tensile dataset (if not already loaded)
+library(ACSWR)
+data("tensile")
+
+# Create a boxplot to visualize the relationship between CWP and tensile strength
+boxplot(Tensile_Strength ~ CWP, data = tensile, xlab = "CWP", ylab = "Tensile Strength",
+        main = "Effect of CWP on Tensile Strength")
+
+```
+Side-by-side boxplots can provide a visual indication of differences in spread (variance) among multiple groups. This Side-by-side boxplots show that there are clear differences in variance and the central tendency or spread of tensile strength between CWP levels, it suggests that there is difference in variance and CWP may have an effect on tensile strength.
+
+b
+```{r}
+# Shapiro-Wilk test for normality
+shapiro_test <- shapiro.test(tensile$Tensile_Strength)
+
+# Perform Bartlett's test for equality of variances
+bartlett_test <- bartlett.test(tensile$Tensile_Strength, tensile$CWP)
+
+# Print the results
+print(shapiro_test)
+print(bartlett_test)
+
+```
+```{r}
+# Perform Levene's test for equality of variances
+levene_test <- car::leveneTest(tensile$Tensile_Strength, tensile$CWP)
+
+# Print the result
+print(levene_test)
+
+```
+
+shapiro.test Hypotheses
+H0: The dataset is normally distributed.
+H1: The dataset is not normally distributed.
+The observed p-values is 0.247 greater than 0.05, failed to reject H0 at the significance level of 0.05, supporting the normality assumption of the dataset at 0.05 significance level. And Bartlett's test assumes that the populations being compared are normally distributed. So, we can apply Bartlett's test in this case.
+
+H0: Equal variance in all groups
+H1: At least one group's variance is different.
+
+For Bartlett's test, the p-value is 0.9198 larger than 0.05, failed to reject H0 at the significance level of 0.05. the variances are equal at 0.05 significance level.
+For Levene's test, the p-value is s 0.8626 larger than 0.05, it also suggests that failed to reject H0 at the significance level of 0.05. So, the variances are equal at 0.05 significance level.
+
+Differences Between Bartlett's Test and Levene's Test:
+
+Sensitivity to Departures from Normality:
+Bartlett's test assumes that the populations being compared are normally distributed. It is sensitive to deviations from normality.
+Levene's test is less sensitive to departures from normality and is more robust when the assumption of normality is violated.
+Test Statistic:
+Bartlett's test uses the ratio of the sum of squared deviations from the group means to the mean of the sum of squared deviations from the group data.
+Levene's test uses the absolute deviations from the group medians, which makes it less affected by outliers.
+
+The boxplots show substantial differences in spread, it may suggest that variances are not equal.
+While Bartlett's test and Levene's test result in a equal variance in all groups. Bartlett's test can be sensitive to sample size, especially when the group sizes are unequal. Small sample sizes can lead to inaccurate results.
+Levene's test is less sensitive to sample size, making it more appropriate for cases with unequal group sizes.
+Outliers: Outliers can disproportionately affect Bartlett's test, leading to false indications of unequal variances if outliers are present. Levene's test, based on the absolute deviations from the group medians, can be less affected by extreme values.
+
+
+c
+H0: equal Tensile_Strength mean in all levels of CWP
+H1: at least one level of CWP's Tensile_Strength mean is different.
+
+d
+```{r}
+aovmod <- aov(Tensile_Strength ~ as.factor(CWP), data = tensile)
+summary(aovmod)
+```
+
+
+```{r}
+anova_model <- aov(Tensile_Strength ~ CWP, data = tensile)
+
+summary(lm(anova_model))
+```
+The p-value is 0.2693 larger than 0.05, failed to reject H0 at the significance level of 0.05. The Tensile_Strength means are equal at 0.05 significance level.
+
+```{r}
+aovres <- residuals(anova_model)
+car::qqPlot(aovres, main = NA, pch = 19, col = 2, cex = 0.7)
+```
+```{r}
+shapiro.test(aovres)
+```
+The residuals in the normal qq plot seem to fall along a straight line, which may confirm the normality of the residuals.
+shapiro.test Hypotheses
+H0: The residual is normally distributed.
+H1: The residual is not normally distributed.
+The observed p-values is 0.2141 larger than 0.05, failed to reject H0 at the significance level of 0.05, supporting the normality assumption of the residual at 0.05 significance level.
+
+5
+Cherry-picking in statistical analysis refers to the unethical practice of selectively choosing and presenting data or results that support a specific hypothesis or desired conclusion while ignoring or omitting data that contradicts or does not support that hypothesis.
+
+Example:
+Suppose testing a new drug in treating a particular medical condition. The test involves a large group of patients, and the primary outcome measure is the reduction in symptoms after treatment. The trial results are as follows:
+
+In the treatment group, assume 68% of patients show a significant reduction in symptoms.
+In the control group, assume 45% of patients show a significant reduction in symptoms.
+Cherry-Picking Scenario:
+
+In this hypothetical example, the pharmaceutical company engages in cherry-picking by selective Reporting: The company chooses to only report the results from the treatment group, emphasizing that 68% of patients improved significantly. They highlight this as a success of the drug.
+Omission of Contradictory Data: The company omits the data from the control group, where 45% of patients also improved. This information is left out because it does not support the desired conclusion and may lead to a downplay to the original assumption.
+
+Cherry-picking is unethical for the following reasons:
+
+1. Misleading Conclusions: By selectively presenting only the data that supports their product or hypothesis, the pharmaceutical company misleads the public, healthcare professionals, and regulators into believing that the drug is more effective than it may actually be.
+2. Bias and Manipulation: Cherry-picking introduces bias into the analysis, as the choice of which data to present is not based on objectivity or scientific integrity but rather on the desire to achieve a specific outcome.
+Risk to Patient Safety: If the drug's effectiveness is overestimated based on cherry-picked data, patients may choose or be prescribed a less effective treatment, potentially putting their health at risk.
+3. Scientific Integrity: Cherry-picking undermines the principles of transparency and scientific integrity, which are fundamental to the advancement of knowledge and the development of evidence-based treatments.By violating this , it can create a mistrust to the entire field.
