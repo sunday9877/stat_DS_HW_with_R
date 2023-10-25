@@ -1,0 +1,424 @@
+---
+title: "hw7"
+output: html_document
+date: "2023-10-18"
+---
+1.
+```{r}
+library(ggplot2)
+snails <- read.csv("snails.csv", header = TRUE)
+```
+
+
+
+```{r}
+snails$Aspect[snails$Aspect==6]=5
+snails$Aspect[snails$Aspect==2]=1
+snails$Aspect <- as.factor(snails$Aspect)
+snails$Soil <- as.factor(snails$Soil)
+snails$CC <- as.factor(snails$CC)
+snails$LC <- as.factor(snails$LC)
+```
+
+```{r}
+cat.id <- which(colnames(snails) %in% c("Aspect","Soil","CC","LC"))
+snails[,cat.id] <- lapply(snails[,cat.id],as.factor)
+```
+
+```{r}
+Asp1 <- ifelse(snails$Aspect == 1, 1, 0)
+Asp5 <- ifelse(snails$Aspect == 5, 1, 0)
+Asp7 <- ifelse(snails$Aspect == 7, 1, 0)
+Asp8 <- ifelse(snails$Aspect == 8, 1, 0)
+```
+
+```{r}
+set.seed(123457)
+train.prop <- 0.80
+trnset <- sort(sample(1:nrow(snails), ceiling(nrow(snails)*train.prop)))
+# create the training and test sets
+train.set <- snails[trnset, ]
+test.set  <- snails[-trnset, ]
+```
+
+
+```{r}
+#### fit a Poisson GLIM regression for Gaenig
+Gaenig.pf <- glm(Gaenig~Elevation+Slope+Aspect+Soil+CC+LC+PA.sp+PA.other, 
+                 family='poisson', data=train.set)
+summary(Gaenig.pf)
+```
+In the full Poisson loglinear mdoel the coefficients(the significance is discuss under level of 0.05):
+
+Intercept: -1.319004 - This is the expected log count of Gaenig when all other predictor variables are zero. In this model, it's not statistically significant (p = 0.6865), indicating that there's no significant effect on Gaenig when all predictors are zero.
+Elevation: 0.006721 - For each one-unit increase in Elevation, the expected log count of Gaenig is expected to increase by 0.006721. However, this effect is not statistically significant (p = 0.4185).
+Slope: -0.007676 - For each one-unit increase in Slope, the expected log count of Gaenig is expected to decrease by 0.007676. Similar to Elevation, this effect is not statistically significant (p = 0.4992).
+Aspect5: -0.412101 - Aspect5 is one level of the Aspect variable. It's a categorical variable with multiple levels, and this coefficient represents the difference in the expected log count of Gaenig when Aspect5 is compared to the reference level (the one not listed). It's not statistically significant (p = 0.2513).
+Aspect7: -0.619690 - Similar to Aspect5, but for Aspect7. It is statistically significant with p = 0.0375, indicating that Aspect7 has a significant impact on Gaenig.
+Aspect8: -0.393266 - Similar to Aspect5, but for Aspect8. It's not statistically significant (p = 0.1161).
+Soil4: -0.755784 - For Soil4, this coefficient represents the difference in the expected log count of Gaenig when Soil4 is compared to the reference level (the one not listed). It's statistically significant with p = 0.0131, suggesting that Soil4 has a significant impact on Gaenig.
+Soil6: -0.493163 - Similar to Soil4, but for Soil6. Not statistically significant (p = 0.4094).
+CC2: -0.361238 - For CC2, this coefficient represents the difference in the expected log count of Gaenig when CC2 is compared to the reference level (the one not listed). It's not statistically significant (p = 0.2516).
+CC3: -0.120887 - Similar to CC2, but for CC3. Not statistically significant (p = 0.6111).
+LC2: 0.068292 - For LC2, this coefficient represents the difference in the expected log count of Gaenig when LC2 is compared to the reference level (the one not listed). It's not statistically significant (p = 0.8227).
+LC3: -0.218786 - Similar to LC2, but for LC3. Not statistically significant (p = 0.4917).
+LC4: 0.122064 - Similar to LC2, but for LC4. Not statistically significant (p = 0.7119).
+LC5: 0.021419 - Similar to LC2, but for LC5. Not statistically significant (p = 0.9644).
+PA.sp: 0.010703 - For each one-unit increase in PA.sp, the expected log count of Gaenig is expected to increase by 0.010703. This effect is not statistically significant (p = 0.5130).
+PA.other: -0.014093 - For each one-unit increase in PA.other, the expected log count of Gaenig is expected to decrease by 0.014093. It's statistically significant with p = 0.0137, indicating that PA.other has a significant impact on Gaenig.
+
+
+```{r}
+### null model
+Gaenig.pn <- glm(Gaenig~1, 
+                 family='poisson', data=train.set)
+summary(Gaenig.pn)
+```
+
+
+
+```{r}
+#evaluating the model performance with the test data
+predictions <- predict(Gaenig.pf, newdata = test.set, type = "response")
+
+rmse <- sqrt(mean((predictions - test.set$Gaenig)^2))
+
+# Print RMSE to evaluate the model fit
+cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+```
+Root Mean Squared Error helps assess how well the Poisson loglinear model performs in predicting Gaenig snail counts on the test data. Lower RMSE values indicate a better fit. The RMSE value measures the average magnitude of the errors or the discrepancies between the observed (actual) values and the predicted values. Here the RMSE of 1.130924 suggests that, on average, the model's predictions for Gaenig snail counts deviate from the actual counts by about 1.13 units.
+
+
+
+
+
+```{r}
+evaluation_data <- data.frame(Observed = test.set$Gaenig, Predicted = predictions)
+# Create a plot to visualize the fit
+ggplot(evaluation_data, aes(x = Observed, y = Predicted)) +
+  geom_point() +
+  labs(x = "Observed Counts", y = "Predicted Counts") +
+  ggtitle("Observed vs. Predicted Counts for Gaenig Snails po log")
+```
+
+
+
+```{r}
+dispersion <- Gaenig.pf$deviance / Gaenig.pf$df.residual
+print(dispersion)
+```
+The dispersion parameter of 1.694586 for the snails data indicates overdispersion.
+a dispersion parameter of 1.694586 indicates that the observed data has more variation than what the Poisson loglinear model with an assumed dispersion parameter of 1 can explain. This suggests that there may be additional sources of variability that are not captured by the model or that the data is better explained by a different model with a more flexible dispersion structure.
+
+```{r}
+#model adequacy 
+with(Gaenig.pf, cbind(deviance = deviance, df = df.residual,
+     p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+The chi-squared statistic tests 
+H0: data prefers the full model versus 
+H1: data does not prefer the full model.
+
+The observed chi-squared test statistic is 177.9315 with 105 d.f. and the p-value is very small 1.152255e-05<0.05. We reject H0 at significance level of 0.05, and conclude that the fitted model is inadequate.
+
+
+```{r}
+#Chi-squared test
+chi_squared_test <- 1 - pchisq(deviance(Gaenig.pf), df.residual(Gaenig.pf))
+chi_squared_test
+```
+as discussed in previous section
+
+
+```{r}
+# Deviance residuals
+deviance_residuals <- residuals(Gaenig.pf, type = "deviance")
+summary(deviance_residuals)
+```
+
+Deviance residuals are used to assess how well the model's predictions align with the observed data. Negative residuals indicate that the model underpredicts the outcome, while positive residuals suggest overprediction.
+The quartiles (1st and 3rd quartiles) help understand the spread of residuals around the median. A wider spread indicates greater variability in prediction errors.
+The mean value provides an overall measure of the average prediction error in the model. In this case, the mean deviance residual is slightly negative, indicating a slight tendency for underprediction, on average.
+In summary, the distribution of deviance residuals gives insight into how well the model is performing. Negative values suggest underprediction, while positive values indicate overprediction. The quartiles and mean help understand the variability and central tendency of prediction errors in the model
+
+```{r}
+# Information criteria - AIC and BIC
+
+AIC(Gaenig.pf)
+BIC(Gaenig.pf)
+
+AIC(Gaenig.pn, Gaenig.pf)
+BIC(Gaenig.pn, Gaenig.pf)
+```
+
+AIC is a measure of model fit that takes into account both the goodness of fit and the complexity of the model. It penalizes models for having more parameters, encouraging a balance between model fit and simplicity. Lower AIC values indicate a better model fit. In the case, an AIC of 379.9979 means that the full Poisson log-linear model has an AIC value of 379.9979.
+BIC is similar to AIC but has a stronger penalty for model complexity. It tends to favor simpler models more than AIC. Like AIC, lower BIC values indicate a better model fit. the full Poisson log-linear model has a BIC value of 424.7305.
+information criteria can be used for model selection and comparison. Lower AIC or BIC values are generally preferred, as they indicate better model performance.
+
+```{r}
+# In-sample MAD on the training data
+predicted_train <- predict(Gaenig.pf, newdata = train.set, type = "response")
+in_sample_mad <- mean(abs(train.set$Gaenig - predicted_train))
+in_sample_mad
+
+```
+The MAD is a measure of the average absolute difference between the actual observed values and the predicted values generated by model. In this context, it represents the average magnitude of the errors made by the model when predicting the target variable on the training data.
+Interpretation: A MAD value of 0.9956443 suggests that, on average, the model's predictions on the training data are off by approximately 0.9956443 units from the actual values. This value is an indication of the model's overall accuracy on the training dataset.
+In general, a smaller MAD value is desirable because it indicates that the model's predictions are closer to the actual values, resulting in higher accuracy.
+a MAD value of 0.9956443 on the training data provides a measure of the prediction accuracy of the model on that specific dataset.
+
+
+
+```{r}
+# Out-of-sample MAD on the test data
+predicted_test <- predict(Gaenig.pf, newdata = test.set, type = "response")
+out_of_sample_mad <- mean(abs(test.set$Gaenig - predicted_test))
+out_of_sample_mad
+```
+
+the Out-of-sample MAD on the test data provides an estimate of how well the model performs on new data. The value of 0.9558375 indicates the average prediction error on the test dataset
+
+```{r}
+with(Gaenig.pf, cbind(deviance = null.deviance-deviance, 
+                      df = df.null-df.residual,
+                      p = pchisq(null.deviance-deviance, 
+                      df.null-df.residual, 
+                      lower.tail=FALSE)))
+```
+
+The chi-squared statistic tests 
+H0: data prefers the full model versus 
+H1: data does not prefer the full model.
+
+The observed chi-squared test statistic is 177.9315 with 105 d.f. and the p-value is small 0.02319318<0.05. We reject H0 at significance level of 0.05, and conclude that the fitted model is inadequate.
+
+```{r}
+(an <- anova(Gaenig.pn, Gaenig.pf, test="Chisq"))
+```
+
+
+
+
+
+
+
+b
+```{r}
+Gaenig.qp <- glm(Gaenig~Elevation+Slope+Aspect+Soil+CC+LC+PA.sp+PA.other, 
+                 family=quasipoisson, data=train.set)
+summary(Gaenig.qp)
+```
+In the full quasi Poisson loglinear model the coefficients(the significance is discuss under level of 0.05):
+Intercept: -1.319004 - This is the expected log count of Gaenig when all other predictor variables are zero. In this model, it's not statistically significant (p = 0.7569), indicating that there's no significant effect on Gaenig when all predictors are zero.
+Elevation: 0.006721 - For each one-unit increase in Elevation, the expected log count of Gaenig is expected to increase by 0.006721. However, this effect is not statistically significant (p = 0.5352).
+Slope: -0.007676 - For each one-unit increase in Slope, the expected log count of Gaenig is expected to decrease by 0.007676. Similar to Elevation, this effect is not statistically significant (p = 0.6044).
+Aspect5: -0.412101 - Aspect5 is one level of the Aspect variable. It's a categorical variable with multiple levels, and this coefficient represents the difference in the expected log count of Gaenig when Aspect5 is compared to the reference level (the one not listed). It's not statistically significant (p = 0.3797).
+Aspect7: -0.619690 - Similar to Aspect5, but for Aspect7. It's also not statistically significant (p = 0.1126).
+Aspect8: -0.393266 - Similar to Aspect5, but for Aspect8. It's not statistically significant (p = 0.2295).
+Soil4: -0.755784 - For Soil4, this coefficient represents the difference in the expected log count of Gaenig when Soil4 is compared to the reference level (the one not listed). It's close to being statistically significant with p = 0.0590.
+Soil6: -0.493163 - Similar to Soil4, but for Soil6. Not statistically significant (p = 0.5272).
+CC2: -0.361238 - For CC2, this coefficient represents the difference in the expected log count of Gaenig when CC2 is compared to the reference level (the one not listed). Not statistically significant (p = 0.3800).
+CC3: -0.120887 - Similar to CC2, but for CC3. Not statistically significant (p = 0.6965).
+LC2: 0.068292 - For LC2, this coefficient represents the difference in the expected log count of Gaenig when LC2 is compared to the reference level (the one not listed). It's not statistically significant (p = 0.8635).
+LC3: -0.218786 - Similar to LC2, but for LC3. Not statistically significant (p = 0.5980).
+LC4: 0.122064 - Similar to LC2, but for LC4. Not statistically significant (p = 0.7770).
+LC5: 0.021419 - Similar to LC2, but for LC5. Not statistically significant (p = 0.9727).
+PA.sp: 0.010703 - For each one-unit increase in PA.sp, the expected log count of Gaenig is expected to increase by 0.010703. This effect is not statistically significant (p = 0.6160).
+PA.other: -0.014093 - For each one-unit increase in PA.other, the expected log count of Gaenig is expected to decrease by 0.014093. It's close to being statistically significant with p = 0.0608.
+
+```{r}
+#evaluating the model performance with the test data
+predictions <- predict(Gaenig.qp, newdata = test.set, type = "response")
+
+rmse <- sqrt(mean((predictions - test.set$Gaenig)^2))
+
+# Print RMSE to evaluate the model fit
+cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+```
+
+
+The RMSE value measures the average magnitude of the errors or the discrepancies between the observed (actual) values and the predicted values. Here the RMSE of 1.130924 suggests that, on average, the model's predictions for Gaenig snail counts deviate from the actual counts by about 1.13 units.
+
+```{r}
+evaluation_data <- data.frame(Observed = test.set$Gaenig, Predicted = predictions)
+# Create a plot to visualize the fit
+ggplot(evaluation_data, aes(x = Observed, y = Predicted)) +
+  geom_point() +
+  labs(x = "Observed Counts", y = "Predicted Counts") +
+  ggtitle("Observed vs. Predicted Counts for Gaenig Snails quasi po")
+```
+
+```{r}
+Gaenig.qpn <- glm(Gaenig~1,
+                  family=quasipoisson,data=train.set)
+summary(Gaenig.qpn)
+```
+
+
+```{r}
+dispersion <- Gaenig.qp$deviance / Gaenig.qp$df.residual
+print(dispersion)
+```
+The dispersion parameter of 1.694586 for the snails data indicates overdispersion.
+a dispersion parameter of 1.694586 indicates that the observed data has more variation than what the quasi Poisson loglinear model with an assumed dispersion parameter of 1 can explain. This suggests that there may be additional sources of variability that are not captured by the model or that the data is better explained by a different model with a more flexible dispersion structure.
+
+```{r}
+#check adequacy of the fitted model
+with(Gaenig.qp, cbind(deviance = deviance, df = df.residual,
+     p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+The chi-squared statistic tests 
+H0: data prefers the full model versus 
+H1: data does not prefer the full model.
+
+The observed chi-squared test statistic is 177.9315 with 105 d.f. and the p-value is very small 1.152255e-05<0.05. We reject H0 at significance level of 0.05, and conclude that the fitted model is inadequate.
+
+
+```{r}
+#Chi-squared test
+chi_squared_test <- 1 - pchisq(deviance(Gaenig.qp), df.residual(Gaenig.qp))
+chi_squared_test
+
+# Deviance residuals
+deviance_residuals <- residuals(Gaenig.qp, type = "deviance")
+summary(deviance_residuals)
+```
+The mean value provides an overall measure of the average prediction error in the model. In this case, the mean deviance residual is slightly negative, indicating a slight tendency for underprediction, on average.
+
+AIC: NA
+BIC: NA
+There is no AIC or BIC for quasi-Poisson model , since the quasi-Poisson model doesn't have valid definition of a likelihood.
+
+```{r}
+train_predictions_qp <- predict(Gaenig.qp, newdata = train.set, type = "response")
+test_predictions_qp <- predict(Gaenig.qp, newdata = test.set, type = "response")
+mad_train_qp <- mad(train.set$Gaenig, train_predictions_qp)
+mad_test_qp <- mad(test.set$Gaenig, test_predictions_qp)
+mad_train_qp
+mad_test_qp
+```
+A MAD value of 1.186242 on the training data provides a measure of the prediction accuracy of the model on that specific dataset.
+the Out-of-sample MAD on the test data provides an estimate of how well the model performs on new data. The value of 1.280115 indicates the average prediction error on the test dataset
+
+
+
+
+
+
+
+c.
+```{r}
+library(MASS)
+#null negative binomial regression model
+Gaenig.bnn <- glm.nb(Gaenig~1, data = train.set)
+summary(Gaenig.bnn)
+#full negative binomial regression model
+Gaenig.bn <- glm.nb(Gaenig~Elevation+Slope+Aspect+Soil+CC+LC+PA.sp+PA.other, data=train.set)
+summary(Gaenig.bn)
+```
+In the full Negative Binomial model the coefficients(the significance is discuss under level of 0.05):
+Intercept: -1.284550 - This is the expected log count of Gaenig when all other predictor variables are zero. In this model, it's not statistically significant (p = 0.7488), indicating that there's no significant effect on Gaenig when all predictors are zero.
+Elevation: 0.006640 - For each one-unit increase in Elevation, the expected log count of Gaenig is expected to increase by 0.006640. However, this effect is not statistically significant (p = 0.5155).
+Slope: -0.007373 - For each one-unit increase in Slope, the expected log count of Gaenig is expected to decrease by 0.007373. Similar to Elevation, this effect is not statistically significant (p = 0.5927).
+Aspect5: -0.393012 - Aspect5 is one level of the Aspect variable. It's a categorical variable with multiple levels, and this coefficient represents the difference in the expected log count of Gaenig when Aspect5 is compared to the reference level (the one not listed). It's not statistically significant (p = 0.3732).
+Aspect7: -0.609973 - Similar to Aspect5, but for Aspect7. It's not statistically significant (p = 0.0965)
+Aspect8: -0.411781 - Similar to Aspect5, but for Aspect8. Not statistically significant (p = 0.1937).
+Soil4: -0.762884 - For Soil4, this coefficient represents the difference in the expected log count of Gaenig when Soil4 is compared to the reference level (the one not listed). It's statistically significant with p = 0.0324, suggesting that Soil4 has an impact on Gaenig.
+Soil6: -0.309083 - Similar to Soil4, but for Soil6. Not statistically significant (p = 0.6572).
+CC2: -0.415025 - For CC2, this coefficient represents the difference in the expected log count of Gaenig when CC2 is compared to the reference level (the one not listed). Not statistically significant (p = 0.2781).
+CC3: -0.184221 - Similar to CC2, but for CC3. Not statistically significant (p = 0.5334).
+LC2: 0.141128 - For LC2, this coefficient represents the difference in the expected log count of Gaenig when LC2 is compared to the reference level (the one not listed). It's not statistically significant (p = 0.7078).
+LC3: -0.193788 - Similar to LC2, but for LC3. Not statistically significant (p = 0.6218).
+LC4: 0.162643 - Similar to LC2, but for LC4. Not statistically significant (p = 0.6912).
+LC5: 0.046854 - Similar to LC2, but for LC5. Not statistically significant (p = 0.9368).
+PA.sp: 0.009280 - For each one-unit increase in PA.sp, the expected log count of Gaenig is expected to increase by 0.009280. This effect is not statistically significant (p = 0.6452).
+PA.other: -0.014174 - For each one-unit increase in PA.other, the expected log count of Gaenig is expected to decrease by 0.014174. It's statistically significant with p = 0.0330, suggesting that PA.other has an impact on Gaenig.
+
+```{r}
+(disp.est <- Gaenig.bn$deviance/Gaenig.bn$df.residual)
+```
+
+A dispersion parameter of 1.239906 in a negative binomial model indicates that the observed data has more variability (variance) than what would be expected under a Poisson distribution. In other words, there is overdispersion in the data. In the context of negative binomial regression, a dispersion parameter close to 1 suggests a good fit to the data, indicating that the model effectively accounts for the overdispersion. The negative binomial model has a dispersion parameter more close to 1,indicating a better fit.
+
+```{r}
+#check adequacy of the fitted model
+with(Gaenig.bn, cbind(deviance = deviance, df = df.residual,
+     p = pchisq(deviance, df.residual, lower.tail=FALSE)))
+```
+
+The chi-squared statistic tests 
+H0: data prefers the full model versus 
+H1: data does not prefer the full model.
+
+The observed chi-squared test statistic is 130.1901 with 105 d.f. and the p-value is 0.04834164 at least > 0.01 and larger than Poisson log and quasi Poisson model p-value. We failed to reject H0 at significance level of 0.01, and conclude that the fitted model is adequate at significance level of 0.01.
+
+```{r}
+# Deviance residuals
+deviance_residuals <- residuals(Gaenig.bn, type = "deviance")
+summary(deviance_residuals)
+```
+The mean value provides an overall measure of the average prediction error in the model. In this case, the mean deviance residual is slightly negative, indicating a slight tendency for underprediction, on average.
+
+```{r}
+# Information criteria - AIC and BIC
+AIC(Gaenig.bn)
+BIC(Gaenig.bn)
+```
+
+The model has an AIC value of  373.852.
+The has a BIC value of 421.3804.
+Information criteria can be used for model selection and comparison. Lower AIC or BIC values are generally preferred, as they indicate better model performance.
+
+```{r}
+train_predictions_bn <- predict(Gaenig.bn, newdata = train.set, type = "response")
+test_predictions_bn <- predict(Gaenig.bn, newdata = test.set, type = "response")
+mad_train_bn <- mad(train.set$Gaenig, train_predictions_bn)
+mad_test_bn <- mad(test.set$Gaenig, test_predictions_bn)
+mad_train_bn
+mad_test_bn
+```
+A MAD value of 1.19869 on the training data provides a measure of the prediction accuracy of the model on that specific dataset.
+the Out-of-sample MAD on the test data provides an estimate of how well the model performs on new data. The value of 1.267138 indicates the average prediction error on the test dataset
+
+
+
+
+```{r}
+(an.nb <- anova(Gaenig.bn, Gaenig.bn, test="Chisq"))
+```
+
+We explore this model fit in more detail. We can fit a reduced model by dropping the predictors from the full model, as shown below
+
+
+```{r}
+Gaenig.nbr <- glm.nb(Gaenig~Aspect+PA.other, data=train.set)
+summary(Gaenig.nbr)
+```
+
+```{r}
+#evaluating the model performance with the test data
+predictions <- predict(Gaenig.bn, newdata = test.set, type = "response")
+
+rmse <- sqrt(mean((predictions - test.set$Gaenig)^2))
+
+# Print RMSE to evaluate the model fit
+cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+```
+
+The RMSE value measures the average magnitude of the errors or the discrepancies between the observed (actual) values and the predicted values. Here the RMSE of 1.131053 suggests that, on average, the model's predictions for Gaenig snail counts deviate from the actual counts by about 1.13 units similar to the previous 2 models.
+
+```{r}
+evaluation_data <- data.frame(Observed = test.set$Gaenig, Predicted = predictions)
+# Create a plot to visualize the fit
+ggplot(evaluation_data, aes(x = Observed, y = Predicted)) +
+  geom_point() +
+  labs(x = "Observed Counts", y = "Predicted Counts") +
+  ggtitle("Observed vs. Predicted Counts for Gaenig Snails negative binomial")
+```
+
+In summary, the negative binomial model has a dispersion parameter more close to 1 than the previous 2 model and having a better model adequacy, indicating a better fit.The AIC and BIC for poisson are 379.9979 and 424.7305，for negative binomial are 373.852 and 421.3804, which are smaller in negative binomial model. Lower AIC or BIC values are generally preferred, as they indicate better model performance. The MAD values for negative binomial model are 1.19869, 1.267138, for quasi poisson model are 1.186242, 1.280115 for poisson loglinear model are 0.9956443, 0.9558375. In general, a smaller MAD value is desirable because it indicates that the model's predictions are closer to the actual values, resulting in higher accuracy. The poisson loglinear model has the best accuracy with smallest MAD value.
+Thus, we choose the negative binomial model to fit the Gaenig count.
+
+In the negative binomial model, the soil4 and PA.other have significant impact on Gaenig at significance level of 0.05. Besides, the aspect7 may also have siginficant impact on Gaenig at lower significance level of 0.01.
+
+

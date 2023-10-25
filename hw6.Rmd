@@ -1,0 +1,402 @@
+---
+title: "hw6"
+output: pdf_document
+date: "2023-10-11"
+---
+
+1a.
+```{r}
+data1 <- read.csv("deforest.csv", header = TRUE)
+
+data1$sqrtfcover <- sqrt(data1$fcover)
+data1$logfcover <- log(data1$fcover)
+par(mfrow=c(1,2))
+hist(data1$sqrtfcover, breaks=100, main="", xlab="sqrt(fcover)")
+hist(data1$logfcover, breaks=100, main="", xlab="log(fcover)")
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+
+qqnorm(data1$sqrtfcover, main="norm QQ Plot for sqrt(fcover)")
+qqline(data1$sqrtfcover, col = "red")
+
+
+qqnorm(data1$logfcover, main="norm QQ Plot for log(fcover)")
+qqline(data1$logfcover, col = "red" )
+
+
+```
+
+
+
+```{r}
+set.seed(123457)
+train.prop <- 0.80
+trnset <- sort(sample(1:nrow(data1), ceiling(nrow(data1)*train.prop)))
+# create the training and test sets
+train.set <- data1[trnset, ]
+test.set  <- data1[-trnset, ]
+```
+
+
+```{r}
+###  recall the sqrtfcover as the response
+
+library(caret)
+contpredcols <- 5:20
+# Find mean and std dev of train.set.1
+normParam <- preProcess(train.set[,contpredcols],
+                        method = c("center", "scale"))
+# standardize the training set based on its mean and std
+data.train <- cbind(train.set[,c("sqrtfcover", "policy")],
+                    predict(normParam, train.set[,contpredcols])) 
+# standardize test set based on the above mean and std dev of training set
+data.test <- cbind(test.set[,c("sqrtfcover", "policy")],
+                   predict(normParam, test.set[,5:20]))
+mod.1 <- lm(sqrtfcover ~., data = data.train)
+summary(mod.1)
+```
+```{r}
+qf(0.95,17,306)
+```
+
+The overall f-stat = 96.5 > 1.656243, which is significant at significance level of 0.05 on 17 and 306 degree of freedom , and R-squared = 0.8428, indicating a good fit overall. Based on the P-values corresponding to t-statistics, some variables are significant in explaining sqrt(fcover), while others seem ineffective.
+
+
+
+```{r}
+###  logfcover as the response
+
+contpredcols <- 5:20
+# Find mean and std dev of train.set.1
+normParam <- preProcess(train.set[,contpredcols],
+                        method = c("center", "scale"))
+# standardize the training set based on its mean and std
+data.train <- cbind(train.set[,c("logfcover", "policy")],
+                    predict(normParam, train.set[,contpredcols])) 
+# standardize test set based on the above mean and std dev of training set
+data.test <- cbind(test.set[,c("logfcover", "policy")],
+                   predict(normParam, test.set[,5:20]))
+mod.3 <- lm(logfcover ~., data = data.train)
+summary(mod.3)
+```
+
+The overall f-stat = 58.78(less than the sqrt fcover as the response) > 1.656243, which is significant at significance level of 0.05 on 17 and 306 degree of freedom when logfcover as the response, and R-squared = 0.7655(less than the sqrt fcover as the response), indicating a good fit overall. Based on the P-values corresponding to t-statistics, many variables are significant in explaining logfcover, while others seem ineffective. The R-squared of logfcover is less than sqrtfcover, which indicates that the model with the square root transformation provides a better fit to the data in terms of explaining the variation in the dependent variable.
+
+
+From the histgram plots, the logfcover is clearly more skewed and has more outliers than sqrtfcover. When the logfcover is more skewed, this might indicate that a log transformation may not be effective in making the data more normally distributed. And logfcover has more outliers, this can have a significant impact on the results of the MLR model. Outliers can disproportionately affect the coefficient estimates and influence the model's performance. From the MLR result, the f stat and r square of the log fcover are both less than the sqrt fcover as the response, which may indicate the sqrtfcover as respponse is better fitted.
+Log-transformed variables have multiplicative effects, which can make interpretation less intuitive. Square root transformations are often more interpretable because they correspond to a relative change in the original values.
+
+1b.
+the use of the Box-Cox transformation
+
+
+```{r}
+library(MASS)
+x <- data1$fcover
+b <- boxcox(lm(x ~ 1))
+
+# Exact lambda
+lambda <- b$x[which.max(b$y)]
+
+box_x <- (x ^ lambda - 1) / lambda
+
+data1$boxfcover <- box_x
+par(mfrow=c(1,2))
+hist(box_x, breaks=100, main="", xlab="transformed_fcover ")
+hist(data1$sqrtfcover, breaks=100, main="", xlab="sqrt(fcover)")
+```
+```{r}
+par(mfrow=c(1,2))
+
+qqnorm(data1$sqrtfcover, main="norm QQ Plot for sqrt(fcover)")
+qqline(data1$sqrtfcover, col = "red")
+
+
+qqnorm(box_x, main="norm QQ Plot for box_trans")
+qqline(box_x, col = "red" )
+```
+
+From the histgram plots and normal qq plots, the Box-Cox transformation data is more bell-shaped than sqrtfcover(more centralized at middle and less skewed). When the  data is more skewed, this might indicate that a log transformation may not be effective in making the data more normally distributed. And when the data has more outliers, this can have a significant impact on the results of the MLR model. Outliers can disproportionately affect the coefficient estimates and influence the model's performance.
+
+```{r}
+###  boxfcover as the response
+x <- data1$fcover
+b <- boxcox(lm(x ~ 1))
+
+# Exact lambda
+lambda <- b$x[which.max(b$y)]
+
+box_x <- (x ^ lambda - 1) / lambda
+
+data1$boxfcover <- box_x
+
+set.seed(123457)
+train.prop <- 0.80
+trnset <- sort(sample(1:nrow(data1), ceiling(nrow(data1)*train.prop)))
+# create the training and test sets
+train.set <- data1[trnset, ]
+test.set  <- data1[-trnset, ]
+
+contpredcols <- 5:20
+# Find mean and std dev of train.set.1
+normParam <- preProcess(train.set[,contpredcols],
+                        method = c("center", "scale"))
+# standardize the training set based on its mean and std
+data.train <- cbind(train.set[,c("boxfcover", "policy")],
+                    predict(normParam, train.set[,contpredcols])) 
+# standardize test set based on the above mean and std dev of training set
+data.test <- cbind(test.set[,c("boxfcover", "policy")],
+                   predict(normParam, test.set[,5:20]))
+modb <- lm(boxfcover ~., data = data.train)
+summary(modb)
+```
+The overall box transformed fcover as response's f-stat = 92.03 < 96.5(sqrtfcover as the response) > 1.656243, which is significant at significance level of 0.05 on 17 and 306 degree of freedom , and R-squared = 0.8364 < 0.8428(sqrtfcover as the response), indicating a good fit overall but less than the one where sqrtfcover as the response. So, the square root of fcover as the response in the MLR model is more reasonable.
+
+
+
+
+2a.
+```{r}
+library(RobStatTM)
+data(waste)
+
+# Fit the MLR model
+model <- lm(SolidWaste ~ ., data = waste)
+
+# View the summary of the regression model
+summary(model)
+
+```
+
+```{r}
+qf(0.95,5,34)
+```
+
+H0: $\beta_0$ $\beta_1$,..., and $\beta_n$ are 0.
+H1: at least one of $\beta_0$ $\beta_1$,..., and $\beta_n$ is nonzero.
+
+The F-statistic in the output has the value 38.25 on 5 and 34 DF greater than 2.493616, at significance level of 0.05, which indicate data is significant at that level of probability. The p-values is also significantly smaller than 0.05 at the significance level of 0.05, reject H0, at least one of $\beta_0$ $\beta_1$,..., and $\beta_n$ is significantly nonzero. The data provides sufficient evidence to reject H0 at significance level of 0.05.
+
+The MLR of 0.8491 tells us that, while significant based on the F-statistic, the fitted model explains 85% of the variability in the response. 
+
+So, the MLR of 0.8491 represents the proportion of the total sample variability
+(sum of squares) explained by the regression model, which indicates of how well the model fits the data.
+
+The Adjusted R-squared:  0.8269 represents the proportion of the mean sum of squares variance explained by the regression model, which takes into account the number of degrees of freedom and is preferable to R-squared.
+
+Based on the P-values corresponding to t-statistics, most variables are significant in explaining solid waste, while Metals seem ineffective.
+
+```{r}
+# Obtain residuals
+residuals <- residuals(model)
+residuals
+```
+
+
+
+```{r}
+par(mfrow=c(2,2))
+plot(model)
+```
+
+The linearity assumption is confirmed by the random with no discernible pattern in the  residuals vs. fitted values plot.
+
+qq residuals plot
+
+Most of the points lie about a straight line except at the start and the tail of data(tail) deviate substantially from the line in the qq residuals plot, it may indicate a problem with the normality assumption.
+
+Scale-Location plot
+
+From the Scale-Location Plot, the points are spread evenly at first with no clear pattern as moving along the x-axis. At the tail of the data, the points fan out or form a funnel shape, which may suggests heteroscedasticity, meaning that the variance of residuals is not consistent across the range of fitted values.
+
+2b
+```{r}
+n <- nrow(waste)
+p <- ncol(waste)-1
+(hilev <- which(influence(model)$hat > max(2*(p+1)/n,0.5)))
+par(mfrow=c(1,1))
+plot(rstandard(model)^2, influence(model)$hat, pch =19, cex=0.5, col="blue",
+     xlab = "squared residual", ylab = "leverage")
+inf0 <- which(influence(model)$hat > 0.5)
+text(rstandard(model)[hilev]^2, influence(model)$hat[hilev], 
+     labels = inf0, cex = 0.9, font =2, pos =1)
+```
+In L-R plot, points that fall in the lower right corner of the L-R plot are outliers, while points that fall in the upper left corner are high leverage points.
+
+```{r}
+library(broom)
+library(dplyr)
+a_bod <- augment(model)
+ggplot(data = a_bod, mapping = aes(x = .fitted, y = .std.resid)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_hline(yintercept = -2, lty = 2)  +
+  geom_hline(yintercept = 2, lty = 2)
+```
+
+From the studentized residual plot, there are 5 outliers based on a threshold 2.
+
+
+```{r}
+student_resid <- studres(model)
+
+# Identify outliers based on a threshold 2
+outliers <- which(abs(student_resid) >2)
+
+# List the outliers
+cat("Outlier indices:", outliers, "\n")
+waste[outliers, ]
+
+```
+
+The Outlier cases are 2,8, 15, 31, 40. 
+
+
+Outliers represent observations that have substantially different residual values compared to the rest of the data. In the "waste" dataset, these outliers are observations that do not conform to the general pattern exhibited by most of the data points. Outliers can occur from various reasons, including data entry errors, measurement errors, or rare extreme events.
+In this case, outliers might indicate instances of waste production that are significantly higher or lower than expected.
+Outliers can have a substantial impact on regression analysis. They can influence the model coefficients and affect the overall model fit.
+The presence of outliers can make the regression model more sensitive to the specific data points. It's important to assess the impact of outliers on the model's validity and generalizability.
+
+
+2c.
+```{r}
+boxplot (influence(model)$hat , sub=" leverages ")
+```
+
+
+```{r}
+lev <- augment(model)
+
+cutoff <- 2 * ncol(model.matrix(model)) / nrow(model.matrix(model))
+lev <- mutate(lev, i = row_number())
+ggplot(data = lev, mapping = aes(x = .hat, y = .std.resid, label = i)) +
+  geom_label() +
+  ggtitle("Residuals vs Leverage") +
+  geom_vline(xintercept = cutoff, lty = 2)
+```
+
+
+```{r}
+leverage <- hatvalues(model)
+
+# Set a threshold for high leverage points (e.g., 2 * (p + 1) / n)
+threshold <- 2 * (length(coef(model)) + 1) / nrow(waste)
+
+# Identify high leverage points
+high_leverage <- which(leverage > threshold)
+
+# List the high leverage points
+cat("high leverage points indices:", high_leverage, "\n")
+waste[high_leverage, ]
+
+```
+The high leverage cases are 2 4 15 31 35 40 if it is greater than 2p/n.
+
+
+High leverage points have extreme predictor values and can exert a strong influence on the regression model's parameter estimates (coefficients). They can substantially impact the model's slope and intercept, potentially leading to a change in the overall fit of the model.
+
+High leverage points might indicate observations with unusual or extreme values for one or more of the predictor variables, such as "Industrial land (acres)," "Fabricated metals (acres)," etc. These extreme values could be due to rare conditions, errors, or unique circumstances that result in a distinct data pattern.
+Impact on Model Fit:
+High leverage points can affect the overall fit and robustness of the regression model. Removing or modifying these points can significantly change the model's results.
+It's important to assess whether high leverage points are valid and representative of the data or if they are the result of data quality issues.
+
+2d.
+```{r}
+par(mfrow=c(2,2))
+boxplot (rstudent (model), sub =" Stud . resid ")
+boxplot (influence(model)$hat , sub=" leverages ")
+boxplot(cooks.distance(model), sub = "Cook's D")
+boxplot(dffits(model), sub = "DFFITS")
+
+```
+```{r}
+cook_d <- cooks.distance(model)
+
+# Set a threshold (e.g., 4 / n)
+threshold_cook <- 4 / nrow(waste)
+
+# Identify influential points based on Cook's distance
+influential_cook <- which(cook_d > threshold_cook)
+
+# List the influential points using Cook's distance
+waste[influential_cook, ]
+
+```
+The influential points identified using Cook's distance are 2, 8, 15, 31, 35, 40.
+Cook’s Distance: How much on average all n fits change when the ith observation is removed.
+Cook's distance is a measure of the influence of each data point on the entire regression model. It quantifies how much the model would change if a specific observation were removed from the dataset. In other words, it identifies data points that have a substantial effect on the regression coefficients and model fit. Cook's distance measures the overall influence of a data point on the regression model's parameters, which includes both the coefficients and the goodness of fit (e.g., R-squared).
+Observations with high Cook's distances indicate points that, if removed, could significantly change the model coefficients and the model's predictive power. They influence the model's overall quality and stability.
+```{r}
+dffits <- dffits(model)
+
+# Set a threshold (e.g., 2 * sqrt(p / n))
+threshold_dffits <- 2 * sqrt(length(coef(model)) / nrow(waste))
+
+# Identify influential points based on DFFITS
+influential_dffits <- which(abs(dffits) > threshold_dffits)
+
+# List the influential points using DFFITS
+waste[influential_dffits, ]
+
+```
+The influential points identified using DFFITS are 2, 8, 15, 31, 35, 40.
+DFBETAS (difference in betas): How much the coefficient estimates change when you omit an observation.
+DFFITS measures the effect of each observation on the fitted values. It quantifies how much the predicted values (fitted values) for the entire dataset would change if a specific observation were excluded. DFFITS is used to detect outliers that have a substantial impact on individual predictions. DFFITS focuses on the impact of each data point on the predicted (fitted) values of the model. It does not directly assess the overall model quality.
+Observations with high DFFITS values significantly affect the predicted values and can alter individual model predictions.
+Influential points detected by DFFITS are typically associated with extreme predictor values or patterns that lead to notable deviations in predicted outcomes.
+
+3.
+```{r}
+car::vif(model) 
+```
+ The general rule of thumb is that VIFs exceeding 4 warrant further investigation, while VIFs exceeding 10 are signs of serious multicollinearity requiring correction. Here the VIF’s corresponding to all variables except land exceed 4, suggesting further check.
+
+```{r}
+library(glmnet)
+pred.df <- waste[,-6] #data frame of predictors only, no solid waste
+pred.mat <- as.matrix(pred.df) # predictors
+resp <- waste$SolidWaste # response
+
+mod.ridge.1=glmnet(pred.mat, resp, alpha = 0, standardize=FALSE)
+
+(lambda.m  <- mod.ridge.1$lambda[100]) 
+coef(mod.ridge.1, s= lambda.m)
+```
+select the best lamda value using k-fold cross-validation, by minimizing a user selected criterion, such as MSE
+```{r}
+cvfit.ridge <- cv.glmnet(pred.mat,resp,alpha=0, standardize=FALSE, 
+                         type.measure = "mse", nfolds = 10)
+plot(cvfit.ridge)
+```
+select the lamda value which minimizes the mean cross-validated error
+```{r}
+cvfit.ridge$lambda.min
+```
+```{r}
+coef(cvfit.ridge, s = "lambda.min")
+```
+select the lamda value which gives the most regularized model such that the cross-validated error is within one standard error of the minimum.
+
+```{r}
+cvfit.ridge$lambda.1se
+```
+
+```{r}
+coef(cvfit.ridge, s = "lambda.1se")
+```
+```{r}
+(all.coef <- cbind(coef(cvfit.ridge, s = "lambda.min"),
+                   coef(cvfit.ridge, s = "lambda.1se"))) 
+```
+
+The last optimal lambda is the one that minimizes the cross-validated mean squared error. The ridge regression coefficients corresponding to lambda.1se value is more closer to 0 which gives the most regularized model such that the cross-validated error is within one standard error of the minimum. Note that while the coefficients are shrunk towards zero, no sparsity is achieved since of none of the coefficients becomes exactly zero.
+
+It's important to note that ridge regression is a regularization technique that helps mitigate multicollinearity by shrinking the regression coefficients toward zero. This can improve the stability and generalization of the model. The lambda parameter controls the amount of regularization, and cross-validation helps select the optimal lambda for the data. 
+
+
+
+
+
