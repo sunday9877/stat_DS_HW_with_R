@@ -1,0 +1,478 @@
+---
+title: "hw8"
+output: html_document
+date: "2023-10-25"
+---
+
+1.
+```{r}
+caeserian <- read.csv("caesarian.csv", header = TRUE)
+caeserian
+```
+
+
+80-20 train-test split of the data
+```{r}
+
+set.seed(123457)
+train.prop <- 0.80
+strats <- caeserian$Caesarian
+rr <- split(1:length(strats), strats)
+idx <- sort(as.numeric(unlist(sapply(rr, 
+        function(x) sample(x, length(x)*train.prop)))))
+caeserian.train <- caeserian[idx, ]
+caeserian.test <- caeserian[-idx, ]
+```
+
+see whether the proportions of the two levels of the response y are the same in the train, test, and the entire data
+```{r}
+summary(caeserian.train$Caesarian)/nrow(caeserian.train)
+```
+
+```{r}
+summary(caeserian$Caesarian)/nrow(caeserian)
+```
+Almost the same proportion
+
+
+
+
+
+Fitting the age binary logit model
+```{r}
+
+age.logit <- glm(Caesarian ~ age ,
+                  data = caeserian.train,
+                  family = binomial(link = "logit"))
+summary(age.logit)
+
+```
+
+Coefficients:
+(Intercept): The intercept is -0.67091, and it is not statistically significant (p-value = 0.634) at significance level of 0.05. This means that when age is zero, the log-odds of having a Caesarian section are not significantly different from zero.
+age: The coefficient for "age" is 0.03445. This means that for each one-year increase in age, the log-odds of having a Caesarian section increase by 0.03445. However, this effect is not statistically significant (p-value = 0.490 greater than 0.05) at significance level of 0.05, indicating that age may not be a statistically significant predictor in this model at significance level of 0.05.
+
+Model Fit:
+The null deviance is 86.046, which represents the deviance of a model with no predictors. The residual deviance is 85.566, which represents the deviance of the model. The lower the deviance, the better the model fits the data. In this case, the model with age as a predictor does not significantly improve the model fit compared to a model with no predictors.
+AIC (Akaike Information Criterion):
+The AIC is a measure of model goodness-of-fit that considers the number of predictors. A lower AIC indicates a better model fit. In this case, the AIC is 89.566.
+Number of Fisher Scoring Iterations:
+This represents the number of iterations performed by the model estimation process. In this case, it took 4 iterations to converge to the estimated coefficients.
+
+In summary, based on the logistic regression results, age does not appear to be a statistically significant predictor of the incidence of Caesarian sections in this dataset. Both the intercept and the coefficient for age are not statistically significant, and the model fit is not significantly improved by including age as a predictor. Other variables or factors may have a more substantial influence on the incidence of Caesarian sections in this dataset.
+
+b.
+```{r}
+# Fit a binary logistic regression model with Age and Delivery Number
+delivery_number.logit <-
+  glm(Caesarian ~ age + delivery_number,
+      data = caeserian.train,
+      family = binomial(link = "logit"))
+summary(delivery_number.logit)
+# Fit a binary logistic regression model with Age and Delivery Time
+delivery_time.logit <-
+  glm(Caesarian ~ age + delivery_time,
+      data = caeserian.train,
+      family = binomial(link = "logit"))
+summary(delivery_time.logit)
+# Fit a binary logistic regression model with Age and Blood Pressure
+blood_pressure.logit <-
+  glm(Caesarian ~ age + blood_pressure,
+      data = caeserian.train,
+      family = binomial(link = "logit"))
+summary(blood_pressure.logit)
+# Fit a binary logistic regression model with Age and Heart Problem
+heart_problem.logit <-
+  glm(Caesarian ~ age + heart_problem,
+      data = caeserian.train,
+      family = binomial(link = "logit"))
+summary(heart_problem.logit)
+```
+
+
+By comparing the 4 different models, the model with "Age" and "Heart Problem" explains the incidence of Caesarian sections the best. The coefficient for "Heart Problem" is 1.810558, and it is statistically significant (p-value = 0.00301) at significance level of 0.05. This implies that Heart Problem is a significant predictor when combined with Age. The odds of having a Caesarian section increase significantly with the presence of a heart problemAdding "Heart Problem" to the model leads to the most significant reduction in deviance, and the coefficient for "Heart Problem" is statistically significant, indicating its importance in predicting the incidence of Caesarian sections when combined with Age.
+
+The model's null deviance is 86.046, and the residual deviance is 75.413. Adding "Heart Problem" to the model results in a reduction in deviance of approximately 10.633 units.
+
+
+c. 
+Fitting the full binary logit model
+```{r}
+full.logit <- glm(Caesarian ~ .,
+                  data = caeserian.train,
+                  family = binomial(link = "logit"))
+summary(full.logit)
+```
+
+coefficients:
+(Intercept): The intercept represents the log-odds of the outcome (Caesarian section) when all other predictor variables are zero. In this case, it's not statistically significant (p-value = 0.70003) at significance level of 0.05, which means that when all predictors are zero, the log-odds of Caesarian section is not significantly different from zero.
+age: The coefficient for "age" is -0.03109. This means that for each one-unit increase in age, the log-odds of having a Caesarian section decreases by 0.03109. However, it is not statistically significant (p-value = 0.62062) at significance level of 0.05, indicating that age may not be a significant predictor in this model.
+delivery_number: The coefficient for "delivery_number" is 0.43417. It is not statistically significant (p-value = 0.29231) at significance level of 0.05, so it may not have a significant impact on the log-odds of Caesarian section.
+delivery_time: The coefficient for "delivery_time" is -0.56524. It is also not statistically significant (p-value = 0.12309) at significance level of 0.05, suggesting that delivery time may not be a significant predictor in this model.
+blood_pressure: The coefficient for "blood_pressure" is -0.54201. It is not statistically significant (p-value = 0.20765) at significance level of 0.05, indicating that blood pressure may not be a significant predictor.
+heart_problem: The coefficient for "heart_problem" is 1.96670, and it is statistically significant (p-value = 0.00282) at significance level of 0.05. This suggests that the presence of a heart problem has a significant positive effect on the log-odds of having a Caesarian section. Specifically, individuals with heart problems are more likely to have a Caesarian section.
+
+Model Fit:
+The null deviance is 86.046, which represents the deviance of a model with no predictors. The residual deviance is 70.369, which represents the deviance of the model. The lower the deviance, the better the model fits the data. In this case, the model seems to provide a better fit than a model with no predictors.
+
+AIC:
+The AIC is a measure of model goodness-of-fit that considers the number of predictors. A lower AIC indicates a better model fit. In this case, the AIC is 82.369.
+
+Number of Fisher Scoring Iterations:
+This represents the number of iterations performed by the model estimation process. In this case, it took 4 iterations to converge to the estimated coefficients.
+
+In summary, this model suggests that the presence of a heart problem is a significant predictor of having a Caesarian section. However, other predictors such as age, delivery number, delivery time, and blood pressure do not appear to have a significant impact on the likelihood of having a Caesarian section in this dataset.
+
+d.
+```{r}
+pred.full <- predict(full.logit, newdata = caeserian.test, type="response")
+
+predicted_classifications <- ifelse(pred.full > 0.65, 1, 0)
+
+# Create a confusion table
+confusion_matrix <- table(Actual = caeserian.test$Caesarian, Predicted = predicted_classifications)
+
+# Print the confusion matrix
+print(confusion_matrix)
+```
+
+```{r}
+(accuracy.full <- round((sum(diag(confusion_matrix))/sum(confusion_matrix))*100,2))
+```
+The model's ability to correctly predict the absence of Caesarian (True Negatives) is relatively good with 6 correct predictions.
+The model's ability to correctly predict the presence of Caesarian (True Positives) is limited to 3 correct predictions.
+The model has a significant number of false negatives (7 cases) where it failed to identify Caesarian when it was present. This suggests that the model may have a relatively high Type II error rate (missed Caesarian cases).
+The model also has a smaller number of false positives (1 case), indicating that it sometimes predicts Caesarian when it's not actually present. The Type I error rate (incorrectly predicted Caesarian) is relatively low.
+
+The accuracy of the model, as calculated from the provided confusion matrix, is approximately 52.94%. This means that the model correctly classified around 52.94% of the total cases in the dataset. However, it's important to note that accuracy alone might not provide a complete picture of the model's performance, especially when dealing with imbalanced datasets or when different types of classification errors have different consequences.
+
+
+
+2.
+```{r}
+lf <- read.csv("leveefailure.csv", header = TRUE)
+
+head(lf)
+```
+
+```{r}
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)
+# Check for missing values
+missing_data <- lf %>%
+  summarise_all(~sum(is.na(.)))
+print(missing_data)
+```
+missing data in X
+
+drop X
+```{r}
+colnames(lf)
+```
+```{r}
+# Remove the "X" column using subsetting
+lf <- lf[, !names(lf) %in% "X"]
+head(lf)
+```
+
+
+```{r}
+###split data
+set.seed(123457)
+train.prop <- 0.80
+strats <- lf$Failure
+rr <- split(1:length(strats), strats)
+idx <- sort(as.numeric(unlist(sapply(rr, 
+        function(x) sample(x, length(x)*train.prop)))))
+lf.train <- lf[idx, ]
+lf.test <- lf[-idx, ]
+```
+
+see whether the proportions of the two levels of the response y are the same in the train, test, and the entire data
+```{r}
+# Calculate the proportion of 0s and 1s in lf.train
+fsummary <- table(lf.train$Failure) / nrow(lf.train)
+
+# Print the summary
+print(fsummary)
+
+```
+```{r}
+# Calculate the proportion of 0s and 1s in lf$Failure
+fsummary <- table(lf$Failure) / nrow(lf)
+
+# Print the summary
+print(fsummary)
+```
+The proportions are the same.
+
+```{r}
+fullm <- glm(Failure ~ . ,data = lf.train, 
+                  family = binomial(link = "logit"))
+summary(fullm)
+```
+
+```{r}
+nullm <- glm(Failure~1, data = lf.train, 
+                  family = binomial(link = "logit"))
+summary(nullm)
+```
+use both backward and forward selection to choose predictors for explaining the response y, using the option direction =“both” in the step() function.
+```{r}
+bothm <- step(nullm, list(lower=formula(nullm),
+                                    upper=formula(fullm)),
+                   direction="both",trace=0, data = bank.data.train)
+formula(bothm)
+```
+
+```{r}
+summary(bothm)
+```
+
+```{r}
+nullm$deviance
+
+fullm$deviance
+
+bothm$deviance
+```
+The full model is preferred on the training data set, which has the lower deviance of 57.54452(larger the difference between the null deviance and residual deviance) than both.logit model.
+
+
+back selection
+```{r}
+backwards <- step(fullm, trace = 0)  #suppress details of each iteration
+# backwards <- step(fullm)  # to show all details
+formula(backwards)
+```
+```{r}
+summary(backwards)
+```
+```{r}
+nullm$deviance
+
+fullm$deviance
+
+backwards$deviance
+```
+
+The full model is preferred on the training data set, with the Residual deviance of backwards: 61.816 slightly larger than the full model.
+
+Forward selection
+```{r}
+forwards = step(nullm, trace=0,
+      scope=list(lower=formula(nullm),
+                 upper=formula(fullm)), direction="forward")
+formula(forwards)
+```
+
+The parameters are which is the same as both stepwise.
+
+```{r}
+summary(forwards)
+```
+```{r}
+nullm$deviance
+
+fullm$deviance
+
+forwards$deviance
+```
+
+The full model is preferred on the training data set, with the Residual deviance of forwards: 71.071 larger than the full model.
+
+In summary, we choose the full model which has the best deviance difference performance.
+
+```{r}
+pred.both <- predict(bothm, newdata = lf.test, type="response")
+pred.full <- predict(fullm, newdata = lf.test, type="response")
+pred.back <- predict(backwards, newdata = lf.test, type="response")
+pred.for <- predict(forwards, newdata = lf.test, type="response")
+(table.both <- table(pred.both > 0.5, lf.test$Failure))
+```
+```{r}
+(table.full <- table(pred.full > 0.5, lf.test$Failure))
+```
+
+```{r}
+(table.back <- table(pred.back > 0.5, lf.test$Failure))
+```
+
+```{r}
+(table.for <- table(pred.for > 0.5, lf.test$Failure))
+```
+
+
+```{r}
+(accuracy.both <- round((sum(diag(table.both))/sum(table.both))*100,2)) 
+```
+
+
+```{r}
+(accuracy.full <- round((sum(diag(table.full))/sum(table.full))*100,2))
+```
+
+```{r}
+(accuracy.back <- round((sum(diag(table.back))/sum(table.back))*100,2))
+```
+
+```{r}
+(accuracy.for <- round((sum(diag(table.for))/sum(table.for))*100,2))
+```
+
+
+We see that the these models give similar performance. The accuracy on fullm and bothm are 50%  and  44% respectively.
+```{r}
+library(pROC)
+roc.both <- roc(lf.test$Failure, pred.both, levels=c(1,0))
+auc(lf.test$Failure, pred.both)
+```
+
+
+
+```{r}
+roc.full <- roc(lf.test$Failure, pred.full, levels=c(1,0))
+auc(lf.test$Failure, pred.full)
+```
+The respective AUC’s of bothm and fullm are 0.5926 and 0.5556.
+AUC measures the ability of a model to distinguish between the two classes (e.g., success and failure) by comparing the true positive rate (sensitivity) to the false positive rate (1-specificity) across different classification thresholds.
+bothm has an AUC of 0.5926.
+This suggests that model "bothm" has a moderately good ability to discriminate between the two classes. An AUC value of 0.5926 indicates that, on average, the model has a 59.26% chance of correctly ranking a randomly chosen positive instance higher than a randomly chosen negative instance.
+fullm has an AUC of 0.5556.
+This suggests that model "fullm" has a slightly lower ability to discriminate between the two classes compared to model "m." The AUC of 0.5556 indicates that, on average, the model has a 55.56% chance of correctly ranking a randomly chosen positive instance higher than a randomly chosen negative instance. However, it's essential to consider other performance metrics, such as accuracy, precision, recall, and F1 score, in combination with AUC to get a comprehensive understanding of the models' performance.
+
+
+```{r}
+library(caret)
+b <- ifelse(pred.both > 0.5,1,0)
+cm.both <- confusionMatrix(reference=as.factor(lf.test$Failure), 
+            data=as.factor(b), mode="everything")
+f <- ifelse(pred.full > 0.5,1,0)
+cm.full <- confusionMatrix(reference=as.factor(lf.test$Failure), 
+            data=as.factor(f), mode="everything")
+b <- ifelse(pred.back > 0.5,1,0)
+cm.back <- confusionMatrix(reference=as.factor(lf.test$Failure), 
+            data=as.factor(b), mode="everything")
+f <- ifelse(pred.for > 0.5,1,0)
+cm.forward <- confusionMatrix(reference=as.factor(lf.test$Failure), 
+            data=as.factor(f), mode="everything")
+cm.full
+cm.both
+cm.back
+cm.forward
+```
+The condusion matrixs are shown above with their Precision, Recall, F1 score. 
+
+```{r}
+par(mfrow=c(2,2))
+plot(fullm)
+```
+
+```{r}
+n <- nrow(lf$Failure)
+p <- ncol(lf$Failure)-1
+(hilev <- which(influence(fullm)$hat > max(2*(p+1)/n,0.5)))
+par(mfrow=c(1,1))
+plot(rstandard(fullm)^2, influence(fullm)$hat, pch =19, cex=0.5, col="blue",
+     xlab = "squared residual", ylab = "leverage")
+inf0 <- which(influence(fullm)$hat > 0.5)
+text(rstandard(fullm)[hilev]^2, influence(fullm)$hat[hilev], 
+     labels = inf0, cex = 0.9, font =2, pos =1)
+```
+In L-R plot, points that fall in the lower right corner of the L-R plot are outliers, while points that fall in the upper left corner are high leverage points. High leverage point is 50.
+
+
+studentized residual plot
+```{r}
+library(broom)
+library(dplyr)
+a_bod <- augment(fullm)
+ggplot(data = a_bod, mapping = aes(x = .fitted, y = .std.resid)) +
+  geom_point() +
+  geom_hline(yintercept = 0) +
+  geom_hline(yintercept = -3, lty = 3)  +
+  geom_hline(yintercept = 3, lty = 3)
+
+```
+From the studentized residual plot, there is no outlier based on a threshold 3.
+```{r}
+library(MASS)
+student_resid <- studres(fullm)
+
+# Identify outliers based on a threshold 3
+outliers <- which(abs(student_resid) >3)
+
+# List the outliers
+cat("Outlier indices:", outliers, "\n")
+```
+
+
+A parsimonious model is a model that accomplishes the desired level of explanation or prediction with as few predictor variables as possible.
+```{r}
+library(vip)
+library(ranger)
+fit.rf.ranger <- ranger(Failure ~ ., data = lf.train, 
+                   importance = 'impurity', mtry = 3)
+(v1 <- vi(fit.rf.ranger))
+```
+```{r}
+fullm <- glm(Failure ~ . ,data = lf.train, 
+                  family = binomial(link = "logit"))
+summary(fullm)
+```
+```{r}
+
+library(caret)
+b <- ifelse(pred.both > 0.5,1,0)
+cm.both <- confusionMatrix(reference=as.factor(lf.test$Failure), 
+            data=as.factor(b), mode="everything")
+f <- ifelse(pred.full > 0.5,1,0)
+cm.full <- confusionMatrix(reference=as.factor(lf.test$Failure), 
+            data=as.factor(f), mode="everything")
+b <- ifelse(pred.back > 0.5,1,0)
+cm.back <- confusionMatrix(reference=as.factor(lf.test$Failure), 
+            data=as.factor(b), mode="everything")
+f <- ifelse(pred.for > 0.5,1,0)
+cm.forward <- confusionMatrix(reference=as.factor(lf.test$Failure), 
+            data=as.factor(f), mode="everything")
+cm.full
+cm.both
+cm.back
+cm.forward
+```
+
+
+
+
+```{r}
+
+fullm$deviance
+
+bothm$deviance
+
+backwards$deviance
+
+forwards$deviance
+
+```
+
+```{r}
+
+(accuracy.full <- round((sum(diag(table.full))/sum(table.full))*100,2))
+
+(accuracy.both <- round((sum(diag(table.both))/sum(table.both))*100,2)) 
+
+(accuracy.back <- round((sum(diag(table.back))/sum(table.back))*100,2))
+
+(accuracy.for <- round((sum(diag(table.for))/sum(table.for))*100,2))
+```
+
+According to the deviance from the Stepwise Variable Selection which Perform stepwise variable selection, which includes forward selection and backward elimination, to iteratively add or remove predictors based on statistical criteria, the backwards secelection seems have the best performance other than the full model(although the accuracy is the lowest). The both and forward stepwise have thw same validation score but smaller deviance difference(recall, accruacy, f1 score). Forward selection : Sinuosity + ChannelWidth + Floodwaywidth;
+both: Sinuosity + ChannelWidth + Floodwaywidth which is the same as Forward selection.
+
+The backward selected parameters are Year + Borrowpit + ChannelWidth + VegWidth + Sinuosity + Dredging.
+
+
+
+
+
